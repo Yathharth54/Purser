@@ -781,7 +781,7 @@
   },
   {
     "term": "AIMS",
-    "definition": "Scheduling Software IndiGo shall use the services of AIMS software to track all changes made to crew rosters. IndiGo through the computerized system shall ensure that the cabin crew member is well within the flight time, flight duty period, duty period and rest period requirements before permitting her to operate a flight. A computer software; AIMS is used for scheduling cabin crew for duties which records their flight time, flight duty period and duty period and rest period. This software also provides appropriate alerts when individual or series of flights are projected to exceed applicable maximum or minimum limits. All records shall be retained for a minimum period of 18 months of the duties performed and the rest periods provided so as to facilitate inspection by the operator\u2019s authorized personnel and surveillance and auditing by the DGCA. Following scenarios are enabled in the scheduling software, as duty time for the purpose of determining required rest periods and calculating duty time limitations for operating cabin crew member. \uf0d8 Entire duration of the flight; \uf0d8",
+    "definition": "Scheduling Software",
     "aliases": [],
     "pdf_page": 218
   }
