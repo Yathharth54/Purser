@@ -34,6 +34,22 @@ regression -- that is exactly why the MRR figure exists alongside it. This
 questions.yaml must be replaced with the real user's questions (spec §16.2)
 before recall@8 is allowed to mean anything about the product. Do not read a
 future 100% here as a finished retrieval system until that swap has happened.
+
+WHAT THIS GATE DOES NOT CATCH -- a reviewer injected mutants and re-ran it:
+
+    Mutant                                    recall@8   top-3    Gate
+    ----------------------------------------  --------   ------   --------
+    baseline                                  100%       85.0%    pass
+    semantic_search off by one page (row + 2) 100%       87.5%    PASSES
+    entire BM25 lexical lane deleted          95.0%      87.5%    PASSES
+    entire semantic lane deleted              87.5%      75.0%    fails
+
+The worst defect this project can ship -- every semantic hit silently citing
+the wrong page -- is invisible to this gate; so is deleting the lexical lane
+outright. This gate is a coarse tripwire, not a safety net. The real guards
+against the off-by-one are `test_semantic_search_maps_vector_row_to_pdf_page_exactly`
+(tests/test_lanes.py) and `build_vectors`' gap/duplicate check
+(tests/test_embed.py), not this file. (Also recorded in spec §13.1.)
 """
 
 from __future__ import annotations
