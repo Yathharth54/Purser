@@ -13,6 +13,7 @@ dependencies = [
     "fastembed>=0.4",
     "typer>=0.15",
     "sse-starlette>=2.1",
+    "pillow>=11.0",
 ]
 
 [project.optional-dependencies]
