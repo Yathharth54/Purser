@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 from purser_core.models import PartName
 
@@ -20,6 +20,7 @@ class Citation(BaseModel):
     effective: date
     text: str
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def label(self) -> str:
         if self.section:
