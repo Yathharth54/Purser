@@ -4,6 +4,9 @@ docs/*.pdf
 # Runtime state (her threads, rendered page cache)
 var/
 
+# fastembed model cache
+.fastembed/
+
 # Python
 __pycache__/
 *.py[cod]
