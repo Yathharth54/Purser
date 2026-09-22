@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 
 from purser_core.models import PartName
 
@@ -30,7 +30,7 @@ class Citation(BaseModel):
 
 class ChatRequest(BaseModel):
     thread_id: str | None = None
-    message: str
+    message: str = Field(min_length=1)
 
 
 class ThreadSummary(BaseModel):
