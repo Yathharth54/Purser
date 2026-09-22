@@ -9,7 +9,6 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sqlmodel>=0.0.22",
-    "alembic>=1.14",
     "numpy>=2.1",
     "fastembed>=0.4",
     "typer>=0.15",
