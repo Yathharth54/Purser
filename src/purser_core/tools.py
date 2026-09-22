@@ -7,16 +7,59 @@ from purser_core.embed import Embedder
 from purser_core.fusion import rrf
 from purser_core.glossary import expand_query, find_term
 from purser_core.lexical import lexical_search
-from purser_core.models import GlossaryEntry, Page, PageText, PartName, SearchHit, TocNode
+from purser_core.models import GlossaryEntry, Page, PageText, PartName, SectionHit, TocNode
 from purser_core.semantic import semantic_search
 
 _SNIPPET_CHARS = 320
 _LANE_DEPTH = 20
 
+# search() walks the fused page ranking, grouping pages into sections, until it
+# has k sections or has scanned this many pages, whichever comes first. Measured
+# median pages-to-reach-8-sections is 18; 40 is a safe ceiling — see design doc
+# §8.4. Do not tune without evidence that beats that baseline.
+_PAGE_SCAN_CAP = 40
+
+# One huge section (§3.5 is 104 pages) must not bloat a single row's payload.
+_MAX_HIT_PAGES = 5
+
 
 def _snippet(page: Page) -> str:
     body = " ".join(ln.strip() for ln in page.lines if ln.strip())
     return body[:_SNIPPET_CHARS]
+
+
+class _SectionAccum:
+    """Accumulates the pages seen for one (part, section) key during the walk.
+
+    `score` and `snippet` are fixed from the first page assigned to this
+    section, which — because the walk consumes `fused` in descending-score
+    order — is necessarily that section's best-scoring page.
+    """
+
+    def __init__(self, page: Page, score: float) -> None:
+        self.part = page.part
+        self.section = page.section
+        self.section_title = page.section_title
+        self.score = score
+        self.hit_pages: list[int] = [page.pdf_page]
+        self.hit_page_numbers: list[int] = [page.page_in_section]
+        self.snippet = _snippet(page)
+
+    def add(self, page: Page) -> None:
+        if len(self.hit_pages) < _MAX_HIT_PAGES:
+            self.hit_pages.append(page.pdf_page)
+            self.hit_page_numbers.append(page.page_in_section)
+
+    def to_hit(self) -> SectionHit:
+        return SectionHit(
+            part=self.part,
+            section=self.section,
+            section_title=self.section_title,
+            score=self.score,
+            hit_pages=self.hit_pages,
+            hit_page_numbers=self.hit_page_numbers,
+            snippet=self.snippet,
+        )
 
 
 def _to_page_text(page: Page) -> PageText:
@@ -37,28 +80,35 @@ class PurserTools:
         self.corpus = Corpus(data_dir)
         self.embedder = Embedder()
 
-    def search(self, query: str, k: int = 8) -> list[SearchHit]:
-        """Find where in the manual a topic lives. Returns coordinates and a snippet."""
+    def search(self, query: str, k: int = 8) -> list[SectionHit]:
+        """Find which sections of the manual a topic lives in.
+
+        `search` narrows; it does not choose. It returns one row per section —
+        best-first, each carrying the pages within it that matched and a
+        snippet from the best of them — for the agent to pick from with
+        `read_section`/`read_page`. `k` is the number of SECTIONS returned,
+        not pages. See design doc §8.4 for the recall measurement behind this.
+        """
         expanded = expand_query(self.corpus, query)
         fused = rrf(
             lexical_search(self.corpus, expanded, k=_LANE_DEPTH),
             semantic_search(self.corpus, self.embedder, expanded, k=_LANE_DEPTH),
         )
-        hits: list[SearchHit] = []
-        for pdf_page, score in fused[:k]:
+
+        sections: dict[tuple[PartName, str | None], _SectionAccum] = {}
+        for pdf_page, score in fused[:_PAGE_SCAN_CAP]:
             page = self.corpus.page(pdf_page)
-            hits.append(
-                SearchHit(
-                    pdf_page=page.pdf_page,
-                    part=page.part,
-                    section=page.section,
-                    section_title=page.section_title,
-                    page_in_section=page.page_in_section,
-                    snippet=_snippet(page),
-                    score=score,
-                )
-            )
-        return hits
+            key = (page.part, page.section)
+            accum = sections.get(key)
+            if accum is None:
+                sections[key] = _SectionAccum(page, score)
+            else:
+                accum.add(page)
+            if len(sections) >= k:
+                break
+
+        ranked = sorted(sections.values(), key=lambda s: -s.score)
+        return [accum.to_hit() for accum in ranked[:k]]
 
     def toc(self, part: PartName | None = None) -> list[TocNode]:
         """The manual's Part/Section tree.

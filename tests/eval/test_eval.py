@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from purser_core.models import PartName, SearchHit
+from purser_core.models import PartName, SectionHit
 from purser_core.tools import PurserTools
 
 QUESTIONS = yaml.safe_load(Path("tests/eval/questions.yaml").read_text())
@@ -38,7 +38,7 @@ PART_FALLBACK_KEY: dict[PartName, str] = {
 }
 
 
-def _key(hit: SearchHit) -> str:
+def _key(hit: SectionHit) -> str:
     """Comparison key for a hit: its section, or its Part's fallback key."""
     return hit.section or PART_FALLBACK_KEY[hit.part]
 
@@ -49,15 +49,12 @@ def tools():
 
 
 def _hit_sections(tools: PurserTools, query: str, n: int) -> list[str]:
-    """Distinct sections in rank order, capped at n."""
-    seen: list[str] = []
-    for hit in tools.search(query, k=12):
-        key = _key(hit)
-        if key not in seen:
-            seen.append(key)
-        if len(seen) == n:
-            break
-    return seen
+    """The top n sections `search` returns, as comparison keys, rank order.
+
+    search() now groups by section itself, so this is a direct read of its
+    result — no page-level dedup step needed here any more.
+    """
+    return [_key(hit) for hit in tools.search(query, k=n)]
 
 
 @pytest.mark.parametrize("case", QUESTIONS, ids=lambda c: c["q"][:48])

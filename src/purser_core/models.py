@@ -75,6 +75,18 @@ class SearchHit(BaseModel):
     score: float
 
 
+class SectionHit(BaseModel):
+    """One section that matched, with the pages inside it that did."""
+
+    part: PartName
+    section: str | None  # None for unsectioned Parts and Annexures
+    section_title: str | None
+    score: float  # fused score of this section's best page
+    hit_pages: list[int]  # pdf_page values, best-first
+    hit_page_numbers: list[int]  # the corresponding page_in_section values
+    snippet: str  # from the best-scoring page
+
+
 class TocNode(BaseModel):
     part: PartName
     section: str | None

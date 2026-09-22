@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from purser_core.models import PartName
 from purser_core.tools import PurserTools
 
 pytestmark = pytest.mark.skipif(not Path("data/manual.sqlite").is_file(), reason="index not built")
@@ -13,17 +14,101 @@ def tools():
     return PurserTools("data")
 
 
-def test_search_returns_hits_with_tree_coordinates(tools):
+def test_search_returns_hits_with_section_coordinates(tools):
     hits = tools.search("ditching", k=5)
     assert hits
     h = hits[0]
-    assert h.part and h.page_in_section >= 1 and h.snippet
+    assert h.part and h.hit_pages and h.snippet
 
 
 def test_search_snippet_is_short_not_a_whole_page(tools):
     """search() is a locator. Reading is a separate, explicit act."""
     for hit in tools.search("evacuation", k=5):
         assert len(hit.snippet) <= 400
+
+
+def test_search_k_is_an_upper_bound_on_sections_returned(tools):
+    """k is the number of SECTIONS now, not pages — see design doc §8.4."""
+    assert len(tools.search("evacuation", k=3)) <= 3
+
+
+# --- Section-grouping algorithm, pinned against a controlled fused ranking ---
+#
+# These monkeypatch `rrf` so the exact page ranking handed to the grouping
+# walk is under test control, independent of what the lexical/semantic lanes
+# actually rank for a given query today. `corpus.page()` is real, so the
+# part/section/page_in_section on each hit are genuine manual coordinates.
+
+
+def _set_fused(monkeypatch, fused):
+    monkeypatch.setattr("purser_core.tools.rrf", lambda *a, **kw: fused)
+
+
+def test_repeated_section_yields_one_hit_with_several_pages_best_first(tools, monkeypatch):
+    # 283, 284, 285 are all section "3.5"; 568 is section "4.4".
+    _set_fused(monkeypatch, [(283, 10.0), (568, 9.0), (284, 8.0), (285, 7.0)])
+    hits = tools.search("irrelevant", k=5)
+
+    by_section = {h.section: h for h in hits}
+    assert set(by_section) == {"3.5", "4.4"}
+    assert by_section["3.5"].hit_pages == [283, 284, 285]
+    assert by_section["4.4"].hit_pages == [568]
+
+
+def test_hit_pages_capped_at_five(tools, monkeypatch):
+    # Seven consecutive hits in section "3.5", then one in "4.4". Requesting
+    # k=2 sections must not stop after the first page of "3.5" — the walk
+    # keeps absorbing "3.5" duplicates (up to the cap) until a *second*
+    # distinct section shows up.
+    fused = [
+        (283, 10.0),
+        (284, 9.0),
+        (285, 8.0),
+        (286, 7.0),
+        (287, 6.0),
+        (288, 5.0),
+        (289, 4.0),
+        (568, 3.0),
+    ]
+    _set_fused(monkeypatch, fused)
+    hits = tools.search("irrelevant", k=2)
+
+    by_section = {h.section: h for h in hits}
+    assert len(by_section["3.5"].hit_pages) == 5
+    assert by_section["3.5"].hit_pages == [283, 284, 285, 286, 287]
+    assert by_section["4.4"].hit_pages == [568]
+
+
+def test_sections_ordered_by_score_descending_not_insertion_order(tools, monkeypatch):
+    # "3.5" (pdf_page 283) is scanned FIRST but scores lower than "4.4"
+    # (pdf_page 568), scanned second. The returned order must follow score,
+    # not the order sections were first encountered.
+    _set_fused(monkeypatch, [(283, 5.0), (568, 9.0)])
+    hits = tools.search("irrelevant", k=2)
+
+    assert [h.section for h in hits] == ["4.4", "3.5"]
+    assert [h.score for h in hits] == [9.0, 5.0]
+
+
+def test_unsectioned_part_is_preserved_not_dropped(tools, monkeypatch):
+    # pdf_page 1 is a Front Matter lead-in page: section=None.
+    _set_fused(monkeypatch, [(1, 4.0)])
+    hits = tools.search("irrelevant", k=1)
+
+    assert len(hits) == 1
+    assert hits[0].section is None
+    assert hits[0].part is PartName.FRONT
+
+
+def test_k_controls_number_of_sections_not_pages(tools, monkeypatch):
+    # Five pages, five distinct sections. k=2 must stop the walk after the
+    # second distinct section even though three more pages remain unscanned.
+    fused = [(1, 5.0), (29, 4.0), (283, 3.0), (567, 2.0), (600, 1.0)]
+    _set_fused(monkeypatch, fused)
+    hits = tools.search("irrelevant", k=2)
+
+    assert len(hits) == 2
+    assert [h.section for h in hits] == [None, "1.1"]
 
 
 def test_read_section_returns_numbered_lines_in_order(tools):
