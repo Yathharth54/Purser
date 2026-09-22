@@ -12,7 +12,9 @@ from pathlib import Path
 import pytest
 
 FORBIDDEN = {"fastapi", "pydantic_ai", "openai", "httpx", "requests", "sqlmodel", "starlette"}
-CORE = Path("src/purser_core")
+CORE = Path(__file__).resolve().parents[1] / "src" / "purser_core"
+PATHS = sorted(CORE.rglob("*.py"))
+assert PATHS, "boundary test found no core modules"
 
 
 def _imported_roots(path: Path) -> set[str]:
@@ -26,7 +28,7 @@ def _imported_roots(path: Path) -> set[str]:
     return roots
 
 
-@pytest.mark.parametrize("path", sorted(CORE.glob("*.py")), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", PATHS, ids=lambda p: p.name)
 def test_core_does_not_import_the_web_stack(path: Path):
     leaked = _imported_roots(path) & FORBIDDEN
     assert not leaked, f"{path.name} imports {sorted(leaked)} — L2 must stay framework-free"
