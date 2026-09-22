@@ -72,6 +72,11 @@ TOP_N_TARGET = 0.80  # SECONDARY soft floor on rank quality, given real teeth to
 
 pytestmark = pytest.mark.skipif(not Path("data/manual.sqlite").is_file(), reason="index not built")
 
+# Set by test_recall_and_rank_quality and re-emitted by conftest.py's
+# pytest_terminal_summary hook, so the line survives on a plain `pytest`
+# invocation even though pytest discards captured stdout on a passing test.
+LAST_SUMMARY: str | None = None
+
 # questions.yaml identifies unsectioned Parts by their ordinal digit (e.g. "7"
 # for PART SEVEN, since that Part has no section numbers of its own). Hits from
 # pages in such a Part carry section=None, so the fallback key must translate
@@ -170,9 +175,15 @@ def test_recall_and_rank_quality(tools):
         f"top-{TOP_N} {top_n_rate:.1%} ({in_top_n}/{n}) | "
         f"MRR {mrr:.3f}"
     )
-    # Printed unconditionally -- pass or fail -- so nobody reading a run sees
-    # only the flattering number. (Run pytest with -s, or read the assertion
-    # message below, to see it when the gates pass.)
+    # Computed unconditionally -- pass or fail -- so nobody reading a run sees
+    # only the flattering number. print() alone is invisible on a plain
+    # `pytest` invocation (stdout is discarded on a passing test), so this is
+    # stashed at module level and re-emitted by conftest.py's
+    # pytest_terminal_summary hook, which renders on every run regardless of
+    # capture. Still printed here too, for `-s` and for the assertion message
+    # below on failure.
+    global LAST_SUMMARY
+    LAST_SUMMARY = summary
     print(f"\n{summary}")
 
     assert recall_at_k >= RECALL_TARGET, (
