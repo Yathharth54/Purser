@@ -1,0 +1,20 @@
+# The manual is a controlled document — never commit it.
+docs/*.pdf
+
+# Runtime state (her threads, rendered page cache)
+var/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+web/dist/
+
+# Env
+.env

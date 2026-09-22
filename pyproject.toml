@@ -1,0 +1,38 @@
+[project]
+name = "purser"
+version = "0.1.0"
+description = "A cited retrieval agent over the A320/321 SEP manual"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.9",
+    "pydantic-ai>=0.0.20",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlmodel>=0.0.22",
+    "alembic>=1.14",
+    "numpy>=2.1",
+    "fastembed>=0.4",
+    "typer>=0.15",
+    "sse-starlette>=2.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.8", "httpx>=0.28"]
+
+[project.scripts]
+purser = "purser_ingest.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/purser_core", "src/purser_ingest", "src/purser_agent", "src/purser_api"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
