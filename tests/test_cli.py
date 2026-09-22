@@ -14,10 +14,16 @@ needs_pdf = pytest.mark.skipif(not PDF.is_file(), reason="manual PDF not present
 def test_help_lists_ingest_subcommand():
     """Ungated regression for the Typer-subcommand wiring: CI without the manual
     PDF previously had zero coverage of this, since the only other CLI test is
-    @needs_pdf-gated."""
+    @needs_pdf-gated. Without @app.callback(), a single-command Typer app
+    collapses and treats the literal word "ingest" as the PDF path -- but the
+    app's own help string ("Purser ingest -- PDF to searchable index.") also
+    contains "ingest" in both the group and collapsed forms, so a plain
+    substring check on that word can't detect the collapse. "Commands" only
+    appears in the group (multi-command) help output.
+    """
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "ingest" in result.output
+    assert "Commands" in result.output
 
 
 @needs_pdf
