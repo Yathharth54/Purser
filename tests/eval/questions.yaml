@@ -1,0 +1,82 @@
+# PROVISIONAL. Replace with the user's real questions before launch (spec §16.2).
+# `sections` lists acceptable answers — a question may legitimately live in more than one.
+- q: what is the PA for a ditching
+  sections: ["4.4"]
+- q: how many fire extinguishers are on board
+  sections: ["5.1"]
+- q: what does ABP stand for
+  sections: ["1.2"]
+- q: brace position commands for a prepared emergency landing
+  sections: ["4.4"]
+- q: how do I use the smoke hood
+  sections: ["5.1"]
+- q: what are the duties after landing
+  sections: ["3.16"]
+- q: rules about carrying lithium batteries
+  sections: ["3.7", "3.8"]
+- q: what do I do if a crew member is incapacitated
+  sections: ["3.13"]
+- q: turbulence procedures
+  sections: ["3.12"]
+- q: how do I administer oxygen to a passenger
+  sections: ["3.17"]
+- q: what is the flight deck entry procedure
+  sections: ["3.14"]
+- q: pre take off safety checks
+  sections: ["3.10", "3.4"]
+- q: what are the cabin crew duties during refuelling
+  sections: ["3.11", "2.2"]
+- q: dangerous goods a passenger may carry
+  sections: ["9"]
+- q: what is the procedure for a lavatory fire
+  sections: ["4.1"]
+- q: how do I operate the overwing exit
+  sections: ["6.7"]
+- q: what is an LRBL
+  sections: ["1.2"]
+- q: first aid for a burn
+  sections: ["7"]
+- q: rest requirements and flight duty period limits
+  sections: ["3.1"]
+- q: what is the procedure for smoke in the cabin
+  sections: ["4.2"]
+- q: how many cabin crew are required on an A321
+  sections: ["1.1", "2.1"]
+- q: what is the galley security procedure
+  sections: ["6.2"]
+- q: passengers with reduced mobility seating rules
+  sections: ["3.5"]
+- q: how does the interphone work
+  sections: ["6.3"]
+- q: emergency lighting system
+  sections: ["6.4"]
+- q: what is a slide raft
+  sections: ["5.1", "4.4"]
+- q: unaccompanied minor handling
+  sections: ["3.5"]
+- q: what is the procedure for fuel dumping
+  sections: ["3.15"]
+- q: seat belt requirements for infants
+  sections: ["3.6"]
+- q: what does CIDS mean
+  sections: ["1.2"]
+- q: use of electronic devices during taxi
+  sections: ["3.8"]
+- q: crew briefing before departure
+  sections: ["3.3"]
+- q: water and waste system on the aircraft
+  sections: ["6.5"]
+- q: what are the evacuation commands at a land exit
+  sections: ["4.4"]
+- q: decompression procedure
+  sections: ["4.3"]
+- q: how do I report a cabin defect
+  sections: ["3.16", "6.1"]
+- q: air conditioning and ventilation in the cabin
+  sections: ["6.6"]
+- q: what is the theory of flight
+  sections: ["1.3"]
+- q: physiology of flight and hypoxia
+  sections: ["1.4"]
+- q: what is an EPSU
+  sections: ["1.2"]
