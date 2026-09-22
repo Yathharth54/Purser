@@ -14,6 +14,7 @@ _WORD = re.compile(r"[A-Za-z0-9/]+")
 # canonical term worth injecting into a search query — see expand_query.
 _MAX_DEFINITION_LEN = 80
 _MAX_EXPANSIONS = 3
+_MAX_REVERSE_EXPANSIONS = 3
 
 
 def _index(corpus: Corpus) -> dict[str, GlossaryEntry]:
@@ -36,6 +37,50 @@ def find_term(corpus: Corpus, term: str) -> GlossaryEntry | None:
     return _index(corpus).get(term.strip().lower())
 
 
+def _reverse_index(corpus: Corpus) -> dict[str, str]:
+    """Bigram (from a short glossary DEFINITION) -> that entry's TERM.
+
+    Cached on the Corpus instance for the same reason `_index` is (see its
+    docstring). Restricted to short (<= 80 char) definitions — the
+    abbreviation-table entries — for the same reason `expand_query`'s forward
+    match is: long prose definitions are explanations, not vocabulary worth
+    matching against.
+
+    Keyed by bigram, not single word, so a query is only matched by two
+    consecutive words that also appear consecutively in a definition — see
+    `_reverse_matches`.
+    """
+    cached: dict[str, str] | None = getattr(corpus, "_glossary_reverse_index", None)
+    if cached is None:
+        cached = {}
+        for entry in corpus.glossary:
+            if len(entry.definition) > _MAX_DEFINITION_LEN:
+                continue
+            words = [w.lower() for w in _WORD.findall(entry.definition)]
+            for a, b in zip(words, words[1:], strict=False):
+                cached.setdefault(f"{a} {b}", entry.term)
+        corpus._glossary_reverse_index = cached
+    return cached
+
+
+def _reverse_matches(corpus: Corpus, query: str) -> list[str]:
+    """TERMs whose short definition shares a bigram with the query.
+
+    Single-word matching would fire on any common word a definition happens
+    to contain ("cabin", "flight", "crew") and flood every query; requiring
+    two consecutive words to line up is specific enough to fire only on the
+    phrase a definition actually names.
+    """
+    index = _reverse_index(corpus)
+    words = [w.lower() for w in _WORD.findall(query)]
+    matches: list[str] = []
+    for a, b in zip(words, words[1:], strict=False):
+        term = index.get(f"{a} {b}")
+        if term:
+            matches.append(term)
+    return list(dict.fromkeys(matches))[:_MAX_REVERSE_EXPANSIONS]
+
+
 def expand_query(corpus: Corpus, query: str) -> str:
     """Append short, manual-canonical expansions for glossary terms in the query.
 
@@ -47,8 +92,17 @@ def expand_query(corpus: Corpus, query: str) -> str:
     term — "smoke hood" -> "Protective Breathing Equipment" — which is what
     the abbreviation table gives. Long prose definitions (glossary entries run
     up to 582 characters) are explanations that belong to `find_term`'s
-    caller, not to search: appending one would drown a six-word question. At
-    most 3 expansions are injected, in the order matched.
+    caller, not to search: appending one would drown a six-word question.
+
+    This also runs the reverse direction: "cabin defect" never matches a
+    glossary TERM (the forward loop only matches query tokens against terms),
+    but it does match a bigram inside CDLB's definition, "Cabin Defect Log
+    Book" — the manual's own name for this. That match injects the TERM
+    (CDLB), not the definition, so the lexical lane can find the page that
+    actually uses that abbreviation. See `_reverse_matches`.
+
+    Forward and reverse expansions share one budget: at most 3 total, in the
+    order matched (forward first, then reverse).
     """
     table = _index(corpus)
     additions: list[str] = []
@@ -63,6 +117,8 @@ def expand_query(corpus: Corpus, query: str) -> str:
     for key, entry in table.items():
         if " " in key and key in lowered and len(entry.definition) <= _MAX_DEFINITION_LEN:
             additions.append(entry.definition)
+
+    additions.extend(_reverse_matches(corpus, query))
 
     if not additions:
         return query
