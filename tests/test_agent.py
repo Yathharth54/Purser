@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import pytest
@@ -44,6 +45,23 @@ def test_system_prompt_warns_against_trusting_the_first_search_result():
     assert "section=None" in SYSTEM_PROMPT  # unsectioned hits -> use read_page instead
 
 
+def test_system_prompt_distinguishes_general_knowledge_from_aviation_fact():
+    # Guards the corrected rule: conversational ability is a real product
+    # requirement, so general-knowledge questions ("capital of Portugal")
+    # must be answered naturally -- the risk is narrower than "never use
+    # world knowledge." It is specifically aviation/safety/procedural/
+    # equipment/regulatory questions ("max takeoff weight of the A321") that
+    # must come from the manual with citations or be declined, because those
+    # are the answers she cannot tell apart from verified manual content and
+    # might act on. Pin the concrete example of each class so this doesn't
+    # regress into a vague "be careful" that the model can rationalize past.
+    assert "GENERAL CONVERSATION / GENERAL KNOWLEDGE" in SYSTEM_PROMPT
+    assert "what is the capital of Portugal?" in SYSTEM_PROMPT
+    assert "AVIATION / SAFETY / PROCEDURAL / EQUIPMENT / REGULATORY" in SYSTEM_PROMPT
+    assert "what is the maximum takeoff" in SYSTEM_PROMPT
+    assert "weight of the A321?" in SYSTEM_PROMPT
+
+
 @needs_live
 @pytest.mark.asyncio(loop_scope="module")
 async def test_answers_a_real_question_with_valid_citations(agent_and_deps):
@@ -69,7 +87,31 @@ async def test_cited_pages_are_in_range(agent_and_deps):
 
 @needs_live
 @pytest.mark.asyncio(loop_scope="module")
-async def test_declines_when_the_manual_does_not_cover_it(agent_and_deps):
+async def test_general_knowledge_question_is_answered_naturally(agent_and_deps):
+    # Corrected rule: general conversation/general-knowledge questions are
+    # NOT a decline case. Conversational ability is a real product
+    # requirement -- the agent should answer this like any chat assistant,
+    # while still marking it as not sourced from the manual.
     agent, deps = agent_and_deps
     result = await agent.run("what is the capital of Portugal?", deps=deps)
-    assert result.output.not_in_manual or not result.output.refs
+    assert result.output.not_in_manual
+    assert not result.output.refs
+    assert result.output.body.strip()  # answered, did not stonewall
+    assert "lisbon" in result.output.body.lower()
+
+
+@needs_live
+@pytest.mark.asyncio(loop_scope="module")
+async def test_aviation_question_not_covered_by_manual_is_declined(agent_and_deps):
+    # This IS the decline case: an aviation fact (real max takeoff weight
+    # figures exist for the A321) that is plausibly in the model's training
+    # data but genuinely absent from a cabin safety/emergency procedures
+    # manual. The body must not supply the figure from parametric knowledge
+    # -- she cannot tell that apart from verified manual content.
+    agent, deps = agent_and_deps
+    result = await agent.run("what is the maximum takeoff weight of the A321?", deps=deps)
+    assert result.output.not_in_manual
+    assert not result.output.refs
+    # No weight figure (e.g. "93,500 kg", "97000 kg", "205,000 lb") leaked
+    # into the body: no run of 4+ digits, the shape any real MTOW figure has.
+    assert not re.search(r"\d{4,}", result.output.body)
