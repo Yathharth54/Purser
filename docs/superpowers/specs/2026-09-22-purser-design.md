@@ -181,9 +181,27 @@ worst defect this application can ship.
 
 Taken from the page header line, which carries
 `<Section Title>    Issue IX    Revision NN`. Title is the text before `Issue`;
-revision is the whole trailing token. First non-empty title seen in a section wins;
-sections whose header title is blank fall back to the title in the List of Chapters
-(pages 17–20).
+revision is the whole trailing token. First non-empty title seen in a section wins.
+
+**A title may wrap across the revision line** and the parser must reassemble it.
+`pdftotext -layout` interleaves the wrapped remainder *after* the revision token:
+
+```
+  'Rapid and slow decompression (Pressurization'
+  '                       Issue IX   Revision 00'
+  'Problems)'                                      <- belongs to the title
+```
+
+Two of the 37 sections wrap this way — §4.3 *Rapid and slow decompression
+(Pressurization Problems)* and §3.9 *Fuelling with Passengers On Board and or While
+Disembarking/Embarking*. A regex whose whitespace class spans newlines silently keeps
+only the fragment adjacent to the revision token, producing a truncated title on every
+citation into those sections.
+
+**Amended 2026-09-22 — the List of Chapters fallback is struck.** An earlier draft
+required falling back to the titles on pages 17–20 when a header title is blank. All 37
+numbered sections resolve a title from their own header, so the fallback has no consumer.
+Removed under YAGNI rather than left as an unimplemented requirement.
 
 ### 6.5 Glossary mining
 
@@ -193,8 +211,14 @@ three distinct structures, and they need three parsers:
 | Structure | Where | Shape | Yield |
 | --- | --- | --- | --- |
 | Prose definitions | §1.2, and scattered in §3.1 | `TERM: definition` at line start | ~90 |
-| NATO phonetic alphabet | pp. 119–120 | `X – X-ray` | 26 |
+| ~~NATO phonetic alphabet~~ | ~~pp. 119–120~~ | ~~`X – X-ray`~~ | **excluded** |
 | §1.8 Aviation Abbreviations | p. 121 | **two-column** `ABBR – Expansion` | 46 |
+
+**Amended 2026-09-22 — the phonetic alphabet is deliberately excluded.** Its entries are
+single characters, and `expand_query` lowercases and matches per token: a query containing
+the token `s` or `x` would inject "Sierra" or "X-ray" into the search. Terms shorter than
+two characters are rejected, as are `NOTE\d*` footnote markers. Expected yield is therefore
+**131 entries**, not ~162 — that difference is intended, not a regression.
 
 The abbreviations table is the highest-value of the three — it is where `ABP`, `CIDS`,
 `EPSU`, `LRBL`, `PAX` and `PA` are defined, which is exactly the vocabulary the lexical
