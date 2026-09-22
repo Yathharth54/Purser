@@ -78,24 +78,31 @@ The manual's own structure, parsed from page footers.
 
 ```python
 class PartName(StrEnum):
-    ONE = "PART ONE"; TWO = "PART TWO"; THREE = "PART THREE"
-    FOUR = "PART FOUR"; FIVE = "PART FIVE"; SIX = "PART SIX"
-    SEVEN = "PART SEVEN"; EIGHT = "PART EIGHT"; NINE = "PART NINE"
+    ONE = "PART ONE"
+    TWO = "PART TWO"
+    THREE = "PART THREE"
+    FOUR = "PART FOUR"
+    FIVE = "PART FIVE"
+    SIX = "PART SIX"
+    SEVEN = "PART SEVEN"
+    EIGHT = "PART EIGHT"
+    NINE = "PART NINE"
     TEN = "PART TEN"
     ANNEX = "Annexures"
     FRONT = "Front Matter"
 
+
 class Page(BaseModel):
-    pdf_page: int                 # 1..1226, the physical page — used to render images
+    pdf_page: int  # 1..1226, the physical page — used to render images
     part: PartName
-    section: str | None           # "4.4"; None for Parts Seven-Ten, Annexures, front
-    section_title: str | None     # "Evacuations"
-    page_in_section: int          # 34   <- what she flips to
-    section_total: int            # 80
+    section: str | None  # "4.4"; None for Parts Seven-Ten, Annexures, front
+    section_title: str | None  # "Evacuations"
+    page_in_section: int  # 34   <- what she flips to
+    section_total: int  # 80
     effective: date
-    revision: str | None          # "Issue IX Revision 00", from the page header
-    lines: list[str]              # verbatim, 0-indexed, the citation substrate
-    text: str                     # lines joined, for FTS5 and embedding
+    revision: str | None  # "Issue IX Revision 00", from the page header
+    lines: list[str]  # verbatim, 0-indexed, the citation substrate
+    text: str  # lines joined, for FTS5 and embedding
 ```
 
 `page_in_section` and `pdf_page` are both kept deliberately: the first is what she
@@ -150,8 +157,28 @@ assigned `PartName.FRONT` with `section_title="Manual Administration"` explicitl
 ### 6.3 Structural assertion
 
 `test_structure.py` asserts **every one of the 1,226 pages resolves to a coordinate**,
-and that within each section `page_in_section` runs 1..`section_total` with no gaps or
-duplicates.
+and that within each section `page_in_section` is a **contiguous run with no gaps or
+duplicates, ending exactly at `section_total`**.
+
+**Corrected 2026-09-22.** An earlier draft asserted the run starts at 1. It does not,
+for five sections, and the difference is a property of the manual rather than a parse
+bug. Parts One, Two, Three, Four and Six each open with a 2-page title/contents lead-in
+whose footer carries no Section token (`PART ONE   Page 1 of 76`). Those two pages share
+the following section's counter, so the section itself starts at 3:
+
+| Section | Run | Declared total | Lead-in pages (PDF) |
+| --- | --- | --- | --- |
+| §1.1 | 3..76 | 76 | 27–28 |
+| §2.1 | 3..30 | 30 | 141–142 |
+| §3.1 | 3..28 | 28 | 195–196 |
+| §4.1 | 3..24 | 24 | 523–524 |
+| §6.1 | 3..88 | 88 | 749–750 |
+
+The lead-in pages stay `section=None`. Folding them into the following section would
+produce a tidier 1..N invariant, but only by **inferring** that a Part-only block belongs
+to the section after it — which violates principle 3 (§3) and puts a heuristic in the one
+code path where a mistake yields a citation pointing at the wrong page. They remain
+searchable and readable via `read_page`; they are simply not returned by `read_section`.
 
 This is the most important test in the project. A silent footer-parse failure does not
 crash anything — it produces a citation that points at the wrong page, which is the
@@ -161,9 +188,27 @@ worst defect this application can ship.
 
 Taken from the page header line, which carries
 `<Section Title>    Issue IX    Revision NN`. Title is the text before `Issue`;
-revision is the whole trailing token. First non-empty title seen in a section wins;
-sections whose header title is blank fall back to the title in the List of Chapters
-(pages 17–20).
+revision is the whole trailing token. First non-empty title seen in a section wins.
+
+**A title may wrap across the revision line** and the parser must reassemble it.
+`pdftotext -layout` interleaves the wrapped remainder *after* the revision token:
+
+```
+  'Rapid and slow decompression (Pressurization'
+  '                       Issue IX   Revision 00'
+  'Problems)'                                      <- belongs to the title
+```
+
+Two of the 37 sections wrap this way — §4.3 *Rapid and slow decompression
+(Pressurization Problems)* and §3.9 *Fuelling with Passengers On Board and or While
+Boarding*. A regex whose whitespace class spans newlines silently keeps
+only the fragment adjacent to the revision token, producing a truncated title on every
+citation into those sections.
+
+**Amended 2026-09-22 — the List of Chapters fallback is struck.** An earlier draft
+required falling back to the titles on pages 17–20 when a header title is blank. All 37
+numbered sections resolve a title from their own header, so the fallback has no consumer.
+Removed under YAGNI rather than left as an unimplemented requirement.
 
 ### 6.5 Glossary mining
 
@@ -173,8 +218,14 @@ three distinct structures, and they need three parsers:
 | Structure | Where | Shape | Yield |
 | --- | --- | --- | --- |
 | Prose definitions | §1.2, and scattered in §3.1 | `TERM: definition` at line start | ~90 |
-| NATO phonetic alphabet | pp. 119–120 | `X – X-ray` | 26 |
+| ~~NATO phonetic alphabet~~ | ~~pp. 119–120~~ | ~~`X – X-ray`~~ | **excluded** |
 | §1.8 Aviation Abbreviations | p. 121 | **two-column** `ABBR – Expansion` | 46 |
+
+**Amended 2026-09-22 — the phonetic alphabet is deliberately excluded.** Its entries are
+single characters, and `expand_query` lowercases and matches per token: a query containing
+the token `s` or `x` would inject "Sierra" or "X-ray" into the search. Terms shorter than
+two characters are rejected, as are `NOTE\d*` footnote markers. Expected yield is therefore
+**131 entries**, not ~162 — that difference is intended, not a regression.
 
 The abbreviations table is the highest-value of the three — it is where `ABP`, `CIDS`,
 `EPSU`, `LRBL`, `PAX` and `PA` are defined, which is exactly the vocabulary the lexical
@@ -270,7 +321,7 @@ answer from disconnected fragments.
 
 ```python
 LookupAgent = Agent(
-    model=os.environ["PURSER_MODEL"],     # "openai:gpt-4o" for v1
+    model=os.environ["PURSER_MODEL"],  # "openai:gpt-4o" for v1
     output_type=Answer,
     deps_type=PurserDeps,
     tools=[search, toc, read_section, read_page, lookup_term],
@@ -282,12 +333,13 @@ LookupAgent = Agent(
 ```python
 class CiteRef(BaseModel):
     pdf_page: int
-    line_from: int      # 0-indexed, inclusive
-    line_to: int        # 0-indexed, EXCLUSIVE — a Python half-open slice
+    line_from: int  # 0-indexed, inclusive
+    line_to: int  # 0-indexed, EXCLUSIVE — a Python half-open slice
     # deliberately NO quote field.
 
+
 class Answer(BaseModel):
-    body: str                      # framing in her language
+    body: str  # framing in her language
     refs: list[CiteRef]
     not_in_manual: bool = False
 ```
@@ -333,10 +385,14 @@ FastAPI. Thin: streaming, session persistence, and citation resolution.
 def resolve(ref: CiteRef) -> Citation:
     pg = corpus.page(ref.pdf_page)
     return Citation(
-        part=pg.part, section=pg.section, section_title=pg.section_title,
-        page_in_section=pg.page_in_section, pdf_page=pg.pdf_page,
-        revision=pg.revision, effective=pg.effective,
-        text="\n".join(pg.lines[ref.line_from:ref.line_to]),
+        part=pg.part,
+        section=pg.section,
+        section_title=pg.section_title,
+        page_in_section=pg.page_in_section,
+        pdf_page=pg.pdf_page,
+        revision=pg.revision,
+        effective=pg.effective,
+        text="\n".join(pg.lines[ref.line_from : ref.line_to]),
     )
 ```
 
