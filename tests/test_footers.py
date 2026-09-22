@@ -61,19 +61,19 @@ def test_page_beyond_section_length_is_rejected():
 
 
 def test_body_cross_reference_after_the_real_footer_does_not_win():
-    """A stray footer-shaped cross-reference positioned after the true footer must
-    not override it. The footer region is restricted to the last few non-blank
-    lines of the page precisely so a decoy that falls outside that window --
-    however footer-shaped -- cannot be selected as 'last match wins'."""
+    """A stray footer-shaped cross-reference positioned before the true footer,
+    outside the footer window, must not be selected instead of it. SEC is tried
+    before FRONT (see `_PATTERNS`), so without the window a SEC-shaped decoy in
+    the body wins over the FRONT-shaped real footer -- proving the window (not
+    just 'last match wins') is what makes this page resolve correctly."""
     text = (
-        "PART THREE Section 3.5      Page 34 of 104      Effective 18 May 2023\n"
-        "cf. PART THREE Section 3.5 Page 7 of 104 Effective 18 May 2023\n"
+        "See PART THREE Section 3.5      Page 7 of 104      Effective 18 May 2023\n"
         + "INTENTIONALLY LEFT BLANK\n" * 6
-        + "PART THREE Section 3.5      Page 34 of 104      Effective 18 May 2023\n"
+        + "LOC 2 of 4      Effective 29 September 2025\n"
     )
     c = parse_footer(text)
-    assert c.section == "3.5"
-    assert c.page_in_section == 34
+    assert c.part is PartName.FRONT
+    assert c.page_in_section == 2
 
 
 def test_body_cross_reference_embedded_in_a_sentence_is_never_a_footer():
