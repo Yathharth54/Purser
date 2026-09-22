@@ -1,5 +1,7 @@
-import pytest
 from datetime import date
+
+import pytest
+
 from purser_core.models import PartName
 from purser_ingest.footers import parse_footer
 
@@ -56,3 +58,33 @@ def test_no_footer_returns_none():
 def test_page_beyond_section_length_is_rejected():
     with pytest.raises(ValueError):
         parse_footer("PART ONE Section 1.1   Page 99 of 12   Effective 18 May 2023")
+
+
+def test_body_cross_reference_after_the_real_footer_does_not_win():
+    """A stray footer-shaped cross-reference positioned after the true footer must
+    not override it. The footer region is restricted to the last few non-blank
+    lines of the page precisely so a decoy that falls outside that window --
+    however footer-shaped -- cannot be selected as 'last match wins'."""
+    text = (
+        "PART THREE Section 3.5      Page 34 of 104      Effective 18 May 2023\n"
+        "cf. PART THREE Section 3.5 Page 7 of 104 Effective 18 May 2023\n"
+        + "INTENTIONALLY LEFT BLANK\n" * 6
+        + "PART THREE Section 3.5      Page 34 of 104      Effective 18 May 2023\n"
+    )
+    c = parse_footer(text)
+    assert c.section == "3.5"
+    assert c.page_in_section == 34
+
+
+def test_body_cross_reference_embedded_in_a_sentence_is_never_a_footer():
+    """The $ anchor rejects a footer-shaped fragment that is not alone on its
+    line -- a cross-reference woven into a sentence must never win, regardless
+    of the footer window, because it never ends the line it sits on."""
+    text = (
+        "PART THREE Section 3.5      Page 34 of 104      Effective 18 May 2023\n"
+        "See also cf. PART THREE Section 3.5 Page 7 of 104 Effective 18 May 2023"
+        " for the checklist.\n"
+    )
+    c = parse_footer(text)
+    assert c.section == "3.5"
+    assert c.page_in_section == 34
