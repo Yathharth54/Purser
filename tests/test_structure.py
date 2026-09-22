@@ -1,4 +1,5 @@
 import os
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -29,8 +30,9 @@ def test_every_page_resolves_to_a_coordinate():
     """
     pages = assemble(extract_pages(PDF))
     assert len(pages) == 1226
+    seen_parts = {p.part for p in pages}
+    assert seen_parts == set(PartName), f"parts missing from the parse: {set(PartName) - seen_parts}"
     for p in pages:
-        assert p.part in PartName
         assert p.page_in_section >= 1
         assert p.page_in_section <= p.section_total
 
@@ -107,5 +109,5 @@ def test_assemble_names_the_page_on_parse_failure():
     with pytest.raises(Exception) as exc_info:
         assemble(raw_pages)
     message = str(exc_info.value)
-    assert "2" in message
+    assert re.search(r"\bpage 2\b", message), f"expected 'page 2' anchored in message: {message!r}"
     assert bad_footer in message or "PART ELEVEN" in message
