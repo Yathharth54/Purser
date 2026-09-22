@@ -201,7 +201,7 @@ revision is the whole trailing token. First non-empty title seen in a section wi
 
 Two of the 37 sections wrap this way — §4.3 *Rapid and slow decompression
 (Pressurization Problems)* and §3.9 *Fuelling with Passengers On Board and or While
-Disembarking/Embarking*. A regex whose whitespace class spans newlines silently keeps
+Boarding*. A regex whose whitespace class spans newlines silently keeps
 only the fragment adjacent to the revision token, producing a truncated title on every
 citation into those sections.
 
