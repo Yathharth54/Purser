@@ -24,3 +24,6 @@ web/dist/
 
 # macOS
 .DS_Store
+
+# TS incremental build info
+web/*.tsbuildinfo
