@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from purser_core.models import PartName, SearchHit
 from purser_core.tools import PurserTools
 
 QUESTIONS = yaml.safe_load(Path("tests/eval/questions.yaml").read_text())
@@ -14,6 +15,32 @@ TOP_N = 3
 TARGET = 0.90
 
 pytestmark = pytest.mark.skipif(not Path("data/manual.sqlite").is_file(), reason="index not built")
+
+# questions.yaml identifies unsectioned Parts by their ordinal digit (e.g. "7"
+# for PART SEVEN, since that Part has no section numbers of its own). Hits from
+# pages in such a Part carry section=None, so the fallback key must translate
+# the Part name back into the same digit string the questions file uses.
+# Annexures and Front Matter have no ordinal; they map to keys chosen so they
+# can never collide with a real section key ("1.1") or a Part digit ("7").
+PART_FALLBACK_KEY: dict[PartName, str] = {
+    PartName.ONE: "1",
+    PartName.TWO: "2",
+    PartName.THREE: "3",
+    PartName.FOUR: "4",
+    PartName.FIVE: "5",
+    PartName.SIX: "6",
+    PartName.SEVEN: "7",
+    PartName.EIGHT: "8",
+    PartName.NINE: "9",
+    PartName.TEN: "10",
+    PartName.ANNEX: "annex",
+    PartName.FRONT: "front",
+}
+
+
+def _key(hit: SearchHit) -> str:
+    """Comparison key for a hit: its section, or its Part's fallback key."""
+    return hit.section or PART_FALLBACK_KEY[hit.part]
 
 
 @pytest.fixture(scope="module")
@@ -25,7 +52,7 @@ def _hit_sections(tools: PurserTools, query: str, n: int) -> list[str]:
     """Distinct sections in rank order, capped at n."""
     seen: list[str] = []
     for hit in tools.search(query, k=12):
-        key = hit.section or str(hit.part).split()[-1].lower()
+        key = _key(hit)
         if key not in seen:
             seen.append(key)
         if len(seen) == n:
