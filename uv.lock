@@ -1799,6 +1799,7 @@ dev = [
     { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "ruff" },
 ]
@@ -1814,6 +1815,7 @@ requires-dist = [
     { name = "pydantic-ai", specifier = ">=0.0.20" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
+    { name = "python-dotenv", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
     { name = "sqlmodel", specifier = ">=0.0.22" },
