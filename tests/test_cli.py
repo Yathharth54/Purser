@@ -11,6 +11,15 @@ PDF = Path(os.environ.get("PURSER_PDF_PATH", ""))
 needs_pdf = pytest.mark.skipif(not PDF.is_file(), reason="manual PDF not present")
 
 
+def test_help_lists_ingest_subcommand():
+    """Ungated regression for the Typer-subcommand wiring: CI without the manual
+    PDF previously had zero coverage of this, since the only other CLI test is
+    @needs_pdf-gated."""
+    result = CliRunner().invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "ingest" in result.output
+
+
 @needs_pdf
 def test_ingest_writes_all_four_artifacts(tmp_path):
     result = CliRunner().invoke(app, ["ingest", str(PDF), "--out", str(tmp_path)])
