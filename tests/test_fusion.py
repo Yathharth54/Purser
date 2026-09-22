@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from purser_core.corpus import Corpus
-from purser_core.fusion import rrf
+from purser_core.fusion import RRF_K, rrf
 from purser_core.glossary import _reverse_matches, expand_query, find_term
 from purser_core.models import GlossaryEntry
 
@@ -21,8 +21,18 @@ def test_rrf_keeps_pages_found_by_only_one_lane():
 
 
 def test_rrf_scores_descend():
-    scores = [s for _, s in rrf([(1, 1.0), (2, 0.9)], [(2, 1.0), (3, 0.8)])]
-    assert scores == sorted(scores, reverse=True)
+    # Was: `assert scores == sorted(scores, reverse=True)` -- tautological,
+    # since rrf's own last line is `sorted(scores.items(), key=...)`, so that
+    # assertion passes regardless of whether the underlying arithmetic is
+    # right. Pin the actual RRF numbers instead: page 2 (rank 2 in lane a,
+    # rank 1 in lane b) must outscore page 1 (rank 1, one lane only) and
+    # page 3 (rank 2, one lane only), by exactly the RRF formula.
+    fused = dict(rrf([(1, 1.0), (2, 0.9)], [(2, 1.0), (3, 0.8)]))
+    k = RRF_K
+    assert fused[2] == pytest.approx(1 / (k + 2) + 1 / (k + 1))
+    assert fused[1] == pytest.approx(1 / (k + 1))
+    assert fused[3] == pytest.approx(1 / (k + 2))
+    assert fused[2] > fused[1] > fused[3]
 
 
 def test_rrf_handles_empty_lane():

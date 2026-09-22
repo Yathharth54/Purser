@@ -14,10 +14,13 @@ _SNIPPET_CHARS = 320
 _LANE_DEPTH = 20
 
 # search() walks the fused page ranking, grouping pages into sections, until it
-# has k sections or has scanned this many pages, whichever comes first. Measured
-# median pages-to-reach-8-sections is 18; 40 is a safe ceiling — see design doc
-# §8.4. Do not tune without evidence that beats that baseline.
-_PAGE_SCAN_CAP = 40
+# has k sections or has scanned every page `fused` holds, whichever comes
+# first. `fused` holds at most 2 * _LANE_DEPTH pages (rrf's two lanes, each
+# capped at _LANE_DEPTH), so this bound is really "scan everything fused
+# gave us" — it does not independently limit anything on its own today, but
+# is derived so it stays meaningful if _LANE_DEPTH changes. Measured median
+# pages-to-reach-8-sections is 18 — see design doc §8.4.
+_PAGE_SCAN_CAP = 2 * _LANE_DEPTH
 
 # One huge section (§3.5 is 104 pages) must not bloat a single row's payload.
 _MAX_HIT_PAGES = 5

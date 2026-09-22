@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from purser_core.models import PartName
-from purser_core.tools import PurserTools
+from purser_core.tools import _SNIPPET_CHARS, PurserTools
 
 pytestmark = pytest.mark.skipif(not Path("data/manual.sqlite").is_file(), reason="index not built")
 
@@ -15,16 +15,23 @@ def tools():
 
 
 def test_search_returns_hits_with_section_coordinates(tools):
+    # `h.part` is a StrEnum (always truthy) and `hit_pages` is non-empty by
+    # construction (_SectionAccum always seeds it with one page) -- neither
+    # of those could ever fail. Assert something that actually pins the
+    # coordinates instead: every hit_pages value is a real pdf_page, and the
+    # snippet has real, bounded content.
     hits = tools.search("ditching", k=5)
     assert hits
     h = hits[0]
-    assert h.part and h.hit_pages and h.snippet
+    assert isinstance(h.part, PartName)
+    assert all(1 <= p <= 1226 for p in h.hit_pages)
+    assert 0 < len(h.snippet) <= _SNIPPET_CHARS
 
 
 def test_search_snippet_is_short_not_a_whole_page(tools):
     """search() is a locator. Reading is a separate, explicit act."""
     for hit in tools.search("evacuation", k=5):
-        assert len(hit.snippet) <= 400
+        assert len(hit.snippet) <= _SNIPPET_CHARS
 
 
 def test_search_k_is_an_upper_bound_on_sections_returned(tools):

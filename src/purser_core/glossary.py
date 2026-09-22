@@ -112,10 +112,17 @@ def expand_query(corpus: Corpus, query: str) -> str:
         if entry and len(entry.definition) <= _MAX_DEFINITION_LEN:
             additions.append(entry.definition)
 
-    # Multi-word terms: check the whole lowered query for each known term.
+    # Multi-word terms: check the whole lowered query for each known term, at
+    # a word boundary -- a bare substring test would fire "cabin crew" inside
+    # "cabin crews" (or any longer run sharing that prefix), consistent with
+    # the word-boundary bigram matching in `_reverse_matches` beside it.
     lowered = query.lower()
     for key, entry in table.items():
-        if " " in key and key in lowered and len(entry.definition) <= _MAX_DEFINITION_LEN:
+        if (
+            " " in key
+            and len(entry.definition) <= _MAX_DEFINITION_LEN
+            and re.search(rf"\b{re.escape(key)}\b", lowered)
+        ):
             additions.append(entry.definition)
 
     additions.extend(_reverse_matches(corpus, query))

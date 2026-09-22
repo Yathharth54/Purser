@@ -65,18 +65,16 @@ class PageText(BaseModel):
     numbered_lines: list[str]  # "12| CABIN CREW SHALL..." — index is the citable one
 
 
-class SearchHit(BaseModel):
-    pdf_page: int
-    part: PartName
-    section: str | None
-    section_title: str | None
-    page_in_section: int
-    snippet: str
-    score: float
-
-
 class SectionHit(BaseModel):
-    """One section that matched, with the pages inside it that did."""
+    """One section that matched, with the pages inside it that did.
+
+    `hit_pages` is not exhaustive: it holds only the pages absorbed into this
+    section *before* the section-grouping walk in `PurserTools.search` had
+    already found its k-th section and stopped. A section that had more
+    matching pages further down the fused ranking will not have them listed
+    here -- this is "pages that matched before the walk stopped," not every
+    page of the section that matched.
+    """
 
     part: PartName
     section: str | None  # None for unsectioned Parts and Annexures
