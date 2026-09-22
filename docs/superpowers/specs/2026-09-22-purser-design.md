@@ -150,8 +150,28 @@ assigned `PartName.FRONT` with `section_title="Manual Administration"` explicitl
 ### 6.3 Structural assertion
 
 `test_structure.py` asserts **every one of the 1,226 pages resolves to a coordinate**,
-and that within each section `page_in_section` runs 1..`section_total` with no gaps or
-duplicates.
+and that within each section `page_in_section` is a **contiguous run with no gaps or
+duplicates, ending exactly at `section_total`**.
+
+**Corrected 2026-09-22.** An earlier draft asserted the run starts at 1. It does not,
+for five sections, and the difference is a property of the manual rather than a parse
+bug. Parts One, Two, Three, Four and Six each open with a 2-page title/contents lead-in
+whose footer carries no Section token (`PART ONE   Page 1 of 76`). Those two pages share
+the following section's counter, so the section itself starts at 3:
+
+| Section | Run | Declared total | Lead-in pages (PDF) |
+| --- | --- | --- | --- |
+| §1.1 | 3..76 | 76 | 27–28 |
+| §2.1 | 3..30 | 30 | 141–142 |
+| §3.1 | 3..28 | 28 | 195–196 |
+| §4.1 | 3..24 | 24 | 523–524 |
+| §6.1 | 3..88 | 88 | 749–750 |
+
+The lead-in pages stay `section=None`. Folding them into the following section would
+produce a tidier 1..N invariant, but only by **inferring** that a Part-only block belongs
+to the section after it — which violates principle 3 (§3) and puts a heuristic in the one
+code path where a mistake yields a citation pointing at the wrong page. They remain
+searchable and readable via `read_page`; they are simply not returned by `read_section`.
 
 This is the most important test in the project. A silent footer-parse failure does not
 crash anything — it produces a citation that points at the wrong page, which is the
