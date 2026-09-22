@@ -78,24 +78,31 @@ The manual's own structure, parsed from page footers.
 
 ```python
 class PartName(StrEnum):
-    ONE = "PART ONE"; TWO = "PART TWO"; THREE = "PART THREE"
-    FOUR = "PART FOUR"; FIVE = "PART FIVE"; SIX = "PART SIX"
-    SEVEN = "PART SEVEN"; EIGHT = "PART EIGHT"; NINE = "PART NINE"
+    ONE = "PART ONE"
+    TWO = "PART TWO"
+    THREE = "PART THREE"
+    FOUR = "PART FOUR"
+    FIVE = "PART FIVE"
+    SIX = "PART SIX"
+    SEVEN = "PART SEVEN"
+    EIGHT = "PART EIGHT"
+    NINE = "PART NINE"
     TEN = "PART TEN"
     ANNEX = "Annexures"
     FRONT = "Front Matter"
 
+
 class Page(BaseModel):
-    pdf_page: int                 # 1..1226, the physical page — used to render images
+    pdf_page: int  # 1..1226, the physical page — used to render images
     part: PartName
-    section: str | None           # "4.4"; None for Parts Seven-Ten, Annexures, front
-    section_title: str | None     # "Evacuations"
-    page_in_section: int          # 34   <- what she flips to
-    section_total: int            # 80
+    section: str | None  # "4.4"; None for Parts Seven-Ten, Annexures, front
+    section_title: str | None  # "Evacuations"
+    page_in_section: int  # 34   <- what she flips to
+    section_total: int  # 80
     effective: date
-    revision: str | None          # "Issue IX Revision 00", from the page header
-    lines: list[str]              # verbatim, 0-indexed, the citation substrate
-    text: str                     # lines joined, for FTS5 and embedding
+    revision: str | None  # "Issue IX Revision 00", from the page header
+    lines: list[str]  # verbatim, 0-indexed, the citation substrate
+    text: str  # lines joined, for FTS5 and embedding
 ```
 
 `page_in_section` and `pdf_page` are both kept deliberately: the first is what she
@@ -314,7 +321,7 @@ answer from disconnected fragments.
 
 ```python
 LookupAgent = Agent(
-    model=os.environ["PURSER_MODEL"],     # "openai:gpt-4o" for v1
+    model=os.environ["PURSER_MODEL"],  # "openai:gpt-4o" for v1
     output_type=Answer,
     deps_type=PurserDeps,
     tools=[search, toc, read_section, read_page, lookup_term],
@@ -326,12 +333,13 @@ LookupAgent = Agent(
 ```python
 class CiteRef(BaseModel):
     pdf_page: int
-    line_from: int      # 0-indexed, inclusive
-    line_to: int        # 0-indexed, EXCLUSIVE — a Python half-open slice
+    line_from: int  # 0-indexed, inclusive
+    line_to: int  # 0-indexed, EXCLUSIVE — a Python half-open slice
     # deliberately NO quote field.
 
+
 class Answer(BaseModel):
-    body: str                      # framing in her language
+    body: str  # framing in her language
     refs: list[CiteRef]
     not_in_manual: bool = False
 ```
@@ -377,10 +385,14 @@ FastAPI. Thin: streaming, session persistence, and citation resolution.
 def resolve(ref: CiteRef) -> Citation:
     pg = corpus.page(ref.pdf_page)
     return Citation(
-        part=pg.part, section=pg.section, section_title=pg.section_title,
-        page_in_section=pg.page_in_section, pdf_page=pg.pdf_page,
-        revision=pg.revision, effective=pg.effective,
-        text="\n".join(pg.lines[ref.line_from:ref.line_to]),
+        part=pg.part,
+        section=pg.section,
+        section_title=pg.section_title,
+        page_in_section=pg.page_in_section,
+        pdf_page=pg.pdf_page,
+        revision=pg.revision,
+        effective=pg.effective,
+        text="\n".join(pg.lines[ref.line_from : ref.line_to]),
     )
 ```
 

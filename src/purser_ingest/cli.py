@@ -14,6 +14,9 @@ from purser_ingest.toc_build import build_toc
 
 app = typer.Typer(help="Purser ingest — PDF to searchable index.")
 
+_PDF_ARGUMENT = typer.Argument(..., exists=True, readable=True)
+_OUT_OPTION = typer.Option(Path("data"), "--out", help="Output directory")
+
 
 @app.callback()
 def _main() -> None:
@@ -22,8 +25,8 @@ def _main() -> None:
 
 @app.command()
 def ingest(
-    pdf: Path = typer.Argument(..., exists=True, readable=True),
-    out: Path = typer.Option(Path("data"), "--out", help="Output directory"),
+    pdf: Path = _PDF_ARGUMENT,
+    out: Path = _OUT_OPTION,
 ) -> None:
     """Parse the manual into data/. Run once per manual revision."""
     out.mkdir(parents=True, exist_ok=True)
@@ -50,7 +53,7 @@ def ingest(
     typer.echo("Building SQLite index with FTS5 ...")
     build_index(pages, out / "manual.sqlite")
 
-    typer.echo(f"Embedding {len(pages)} pages (first run downloads the model; this can take a few minutes) ...")
+    typer.echo(f"Embedding {len(pages)} pages (first run downloads the model, can be slow) ...")
     build_vectors(pages, out / "vectors.npy")
 
     typer.echo(f"Done. Index written to {out}/")

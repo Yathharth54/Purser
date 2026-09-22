@@ -42,16 +42,16 @@ class PageCoord(BaseModel):
 class Page(BaseModel):
     """One physical page of the manual."""
 
-    pdf_page: int                 # 1..1226 — what the renderer needs
+    pdf_page: int  # 1..1226 — what the renderer needs
     part: PartName
     section: str | None
     section_title: str | None
-    page_in_section: int          # what she flips to
+    page_in_section: int  # what she flips to
     section_total: int
     effective: date
     revision: str | None
-    lines: list[str]              # verbatim, 0-indexed — the citation substrate
-    text: str                     # lines joined, for FTS5 and embedding
+    lines: list[str]  # verbatim, 0-indexed — the citation substrate
+    text: str  # lines joined, for FTS5 and embedding
 
 
 class PageText(BaseModel):
@@ -62,7 +62,7 @@ class PageText(BaseModel):
     section: str | None
     section_title: str | None
     page_in_section: int
-    numbered_lines: list[str]     # "12| CABIN CREW SHALL..." — index is the citable one
+    numbered_lines: list[str]  # "12| CABIN CREW SHALL..." — index is the citable one
 
 
 class SearchHit(BaseModel):

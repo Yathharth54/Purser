@@ -43,9 +43,16 @@ def build_index(pages: list[Page], db_path: Path) -> None:
             "INSERT INTO pages VALUES (?,?,?,?,?,?,?,?,?,?)",
             [
                 (
-                    p.pdf_page, str(p.part), p.section, p.section_title,
-                    p.page_in_section, p.section_total, p.effective.isoformat(),
-                    p.revision, json.dumps(p.lines), p.text,
+                    p.pdf_page,
+                    str(p.part),
+                    p.section,
+                    p.section_title,
+                    p.page_in_section,
+                    p.section_total,
+                    p.effective.isoformat(),
+                    p.revision,
+                    json.dumps(p.lines),
+                    p.text,
                 )
                 for p in pages
             ],
