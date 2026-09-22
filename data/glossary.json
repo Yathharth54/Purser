@@ -1,0 +1,788 @@
+[
+  {
+    "term": "CABIN CREW",
+    "definition": "A crew member other than a flight crew member detailed to carry out such duties as may be assigned, in the interests of safety of the passengers, by the operator or the pilot in command of the aircraft.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "SENIOR CABIN CREW",
+    "definition": "The Senior Cabin Crew is a senior cabin crew who has overall responsibility for the conduct and co-ordination of Cabin Safety Procedures applicable during normal operations and during abnormal and emergency situations for flights operated with more than one cabin crew. At IndiGo, the Senior Cabin Crew is referred to as Lead.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "LINE CHECK CABIN CREW",
+    "definition": "A cabin Crew with relevant experience identified and trained by the operator to carry out periodic checks on the online Cabin Crew, surveillance of cabin. At IndiGo the Line Check Cabin Crew is referred to as the Check Lead.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "STAND BY",
+    "definition": "It is a defined period of time during which a cabin crew member is required by the operator to be available to receive an assignment for a specific duty.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "FLIGHT",
+    "definition": "Is an aircraft\u2019s movement from its point of origin to its final destination.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "PASSENGER FLIGHT",
+    "definition": "Is a flight with a certified aircraft, flight schedules and routes to which are published.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "FERRY FLIGHT",
+    "definition": "A ferry flight is an aircraft\u2019s movement from one place to another and frequently without full crew compliment and never with passengers. No cabin crew shall be carried on a damaged ferry/substandard flight. For normal ferry/relief flights if no passengers are carried at least one cabin crew shall be on board. A qualified mechanic, engineer or flight crew member can satisfy this requirement. If any passenger is carried the minimum stipulated cabin crew are required.",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "INTERNATIONAL DATE LINE",
+    "definition": "An imaginary line that separates two consecutive calendar days. It is not a perfectly straight line and has been moved slightly over the years to accommodate needs of varied countries in the Pacific Ocean. The places immediately to the left of the International Date Line (the date) are always one day",
+    "aliases": [],
+    "pdf_page": 107
+  },
+  {
+    "term": "GMT/UTC",
+    "definition": "Greenwich Mean Time /Universal Time Coordinated - is a term referring to mean solar time at the Royal Observatory in Greenwich (UTC). This is the standard time used in aviation for time keeping for flights flying when different time zones are involved. 24 HOUR CLOCK: The 24-hour clock is a way of telling the time in which the day runs from midnight to midnight and is divided into 24 hours, numbered from 0 to 24. This form of keeping time is used in aviation as different time zones are involved. Figure 1.2A",
+    "aliases": [],
+    "pdf_page": 108
+  },
+  {
+    "term": "AIRCRAFT CHOCKS",
+    "definition": "A wedge placed in front and in the rear of the aircraft wheels in order to hold the aircraft position firmly and to prevent accidental movement.",
+    "aliases": [],
+    "pdf_page": 108
+  },
+  {
+    "term": "TIME ZONE",
+    "definition": "Is a region of the earth that has adopted the same standard time.",
+    "aliases": [],
+    "pdf_page": 108
+  },
+  {
+    "term": "BLOCK TIME/CHOCK TIME/ FLIGHT TIME",
+    "definition": "The time period from chocks off to chocks on or blocks out to blocks in is called as flight time.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "CHECKED IN BAGGAGE",
+    "definition": "Baggage accepted for transportation which is kept in the cargo hold for which the passenger holds a claim tag.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "EXCESS BAGGAGE",
+    "definition": "Is the baggage in excess of the free allotted baggage allowance. IndiGo allows 15kg free balance allowance on domestic flights and 20 kgs on international flights. (On flights to Dubai and Muscat baggage allowance is 30 kgs)",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "CARRY-ON BAGGAGE/HAND BAGGAGE",
+    "definition": "Is the acceptable amount of free carry-on bags to be carried per passenger on board the aircraft for use during the flight. It should not exceed 7Kgs in weight and 115 cms in size (The sum of L + B + H).",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "RUNWAY",
+    "definition": "A Runway is a hard-surfaced straight path, used for take-off and landing.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "TAXIWAY",
+    "definition": "Is a specially prepared path over which the aircraft moves from the parking bay to and from the runway.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "AERO RAMP",
+    "definition": "Mobile and adjustable ramp used for passenger embarkation and disembarkation.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "STEP LADDER",
+    "definition": "Mobile and adjustable flight of stairs used for passenger embarkation and disembarkation.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "AERO BRIDGE",
+    "definition": "An aerobridge is an enclosed moveable bridge which extends from an airport terminal gate to an airplane thus allowing passengers to board and disembark without going outside.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "HEAD WIND",
+    "definition": "Winds which blow approximately parallel and in opposite direction to the path of the aircraft, which decreases the speed of aircraft.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "TAIL WIND",
+    "definition": "Winds which blow approximately parallel and in the same direction to the path of the aircraft which increases the speed of the aircraft.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "ALTITUDE",
+    "definition": "The vertical distance of a level, a point or an object measured from mean-sea level.",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "COCKPIT VOICE RECORDER",
+    "definition": "A cockpit voice recorder (CVR) is used to record the aural environment in the cockpit or flight deck of an aircraft for the purpose of investigation of",
+    "aliases": [],
+    "pdf_page": 111
+  },
+  {
+    "term": "DIGITAL FLIGHT DATA RECORDER",
+    "definition": "The DFDR is a device used to record specific aircraft performance parameters, for e.g. altitude, speed etc. The data of the last 25 hours is recorded.",
+    "aliases": [],
+    "pdf_page": 112
+  },
+  {
+    "term": "BREAK IN AREAS",
+    "definition": "Specific areas marked on the aircraft fuselage by the manufacturer, suitable for break in by rescue crew from outside in an emergency. These are marked in red or yellow.",
+    "aliases": [],
+    "pdf_page": 112
+  },
+  {
+    "term": "INCIDENT",
+    "definition": "An occurrence, other than an accident / serious incident, associated with the operation of an aircraft, which affects or could have seriously affected the safety of operation leading to an accident/serious incident.",
+    "aliases": [],
+    "pdf_page": 112
+  },
+  {
+    "term": "SERIOUS INCIDENT",
+    "definition": "An incident involving circumstances indicating that there was a high probability of an accident and associated with the operation of an aircraft.",
+    "aliases": [],
+    "pdf_page": 112
+  },
+  {
+    "term": "SIGNIFICANT INCIDENT",
+    "definition": "An incident involving circumstances indicating that an accident or a serious incident could have occurred, if the risk had not been managed within safety margins.",
+    "aliases": [],
+    "pdf_page": 112
+  },
+  {
+    "term": "ACCIDENT",
+    "definition": "An accident is when \uf0d8 a person is fatally or seriously injured as a result of: o being in the aircraft, or o direct contact with any part of the aircraft, including parts which have become detached from the aircraft, or o direct exposure to jet blast \uf0d8 the aircraft sustains damage or structural failure which:",
+    "aliases": [],
+    "pdf_page": 112
+  },
+  {
+    "term": "INFANT",
+    "definition": "An infant is any person who is less than two years of age.",
+    "aliases": [],
+    "pdf_page": 114
+  },
+  {
+    "term": "UMNR - UNACCOMPANIED MINOR",
+    "definition": "An unaccompanied child of the age group of 05-12 years (before completion of 12th birthday) travelling alone is termed as an unaccompanied minor.",
+    "aliases": [],
+    "pdf_page": 114
+  },
+  {
+    "term": "CRITICAL PHASES OF FLIGHT",
+    "definition": "Are all flight operations below 10000 ft. involving take-off and landing. These phases are considered critical as the likelihood of an emergency is very high.",
+    "aliases": [],
+    "pdf_page": 114
+  },
+  {
+    "term": "LOAD AND TRIM SHEET",
+    "definition": "A document prepared for each flight which gives the details of weight and balance of the aircraft.",
+    "aliases": [],
+    "pdf_page": 114
+  },
+  {
+    "term": "BRACE POSITION",
+    "definition": "A protective position of the body which minimizes the risk of injury to an individual upon impact.",
+    "aliases": [],
+    "pdf_page": 114
+  },
+  {
+    "term": "EELC - EMERGENCY EQUIPMENT LOCATION CHART",
+    "definition": "Depicts aircraft layout and the equipment location. The EELC is located in the manual. It is also referred to as the LOPA (LAYOUT PLAN OF AIRCRAFT)",
+    "aliases": [],
+    "pdf_page": 114
+  },
+  {
+    "term": "QRH QUICK REFERENCE HANDBOOK",
+    "definition": "The QRH is a practical manual to be used by Cabin crew for the conduct of cabin operation as a reference document in normal and emergency operations.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "DEADHEAD",
+    "definition": "The term deadhead refers to transportation of non-operating crew members typically for positioning purposes before or after an operational duty assignment.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "AIR TRAFFIC CONTROL (ATC)",
+    "definition": "ATC is a service provided by ground-based controllers who direct aircraft on the ground and through controlled airspace. The primary purpose of ATC worldwide is to prevent collisions, organize and expedite the flow of traffic, and provide information and other support for pilots.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "METEOROLOGY",
+    "definition": "The science that deals with the phenomenon of the atmosphere, especially weather and weather conditions.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "BAY",
+    "definition": "A defined area on the apron for a single aircraft.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "BULKHEADS",
+    "definition": "They are partition walls on board the aircraft to separate compartments.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "APRON/TARMAC",
+    "definition": "A paved surface area where aircraft is parked for loading / unloading / servicing.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "CABIN SAFETY TRAINING MANAGER",
+    "definition": "A person responsible for the cabin crew training and safety functions nominated by the airline and accepted by DGCA.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "EXIT SEAT",
+    "definition": "Each seat having direct access to an exit i.e. a seat from which a passenger can proceed directly to the exit without entering an aisle or passing around an obstruction",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "HANGAR",
+    "definition": "It is an enclosed, secured structure for housing an aircraft.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "PASSENGER MANIFEST",
+    "definition": "A document listing names and seating of passengers in the aircraft.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "OVER FLYING",
+    "definition": "Bypassing a schedule stop.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "RAPID DEPLANEMENT",
+    "definition": "Passengers and/or crew rapidly exit the aircraft via boarding door(s)/air bridge/stairs for precautionary measure.",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "BCAS",
+    "definition": "The Bureau of Civil Aviation Security (BCAS) is the regulatory body in India governing security aspects of civil aviation in India. The aim of BCAS is laying down AVSEC norms in accordance with ICAO Annex-17 to Chicago convention for Airport Operators, Airline operators and their security agencies responsible for implementation AVSEC measures to safeguard civil aviation operations against acts of unlawful interference",
+    "aliases": [],
+    "pdf_page": 115
+  },
+  {
+    "term": "CERTIFICATE OF REGISTRATION (C OF R)",
+    "definition": "An aircraft must be registered with the government of India and each aircraft is given a certificate known as the C of R.",
+    "aliases": [],
+    "pdf_page": 116
+  },
+  {
+    "term": "CERTIFICATE OF AIRWORTHINESS (C OF A)",
+    "definition": "After the issue of the certificate of registration the aircraft must be test flown for its airworthiness. If it is worthy a certificate of airworthiness will be issued to it for operational purposes",
+    "aliases": [],
+    "pdf_page": 116
+  },
+  {
+    "term": "I.A.T.A",
+    "definition": "International Air Transport Association, having its main offices in Montreal, Canada and in Geneva, Switzerland. A voluntary world trade organisation of scheduled airlines, formed in Havana, Cuba in 1945.It works closely with I.C.A.O., and seeks to ensure high standards of flight safety",
+    "aliases": [],
+    "pdf_page": 116
+  },
+  {
+    "term": "I.C.A.O",
+    "definition": "International Civil Aviation Organization, headquartered in Montreal \u2013 Canada is an international organization of civil aviation authorities of member countries. It works closely with I.A.T.A., and seeks to ensure high standards of flight safety IOSA (The IATA Operational Safety Audit): IOSA aims to provide a standardized audit programme of the operational management and control systems of an airline that is based on internationally-recognised standards and supported by a rigorous quality assurance process, for the purpose of serving the airline industry in terms of improving",
+    "aliases": [],
+    "pdf_page": 116
+  },
+  {
+    "term": "DGCA",
+    "definition": "Directorate General of Civil Aviation is the regulatory authority of civil aviation under the ministry of civil aviation in India. The DGCA is responsible for implementing,",
+    "aliases": [],
+    "pdf_page": 116
+  },
+  {
+    "term": "CUSTOMS",
+    "definition": "Customs is an authority or agency in a country responsible for collecting and safeguarding customs duties and for controlling the flow of goods including animals, personal effects and hazardous items in and out of a country. Customs also work in",
+    "aliases": [],
+    "pdf_page": 117
+  },
+  {
+    "term": "IMMIGRATION SERVICES",
+    "definition": "Immigration services of a country help an individual understand and adhere to the rules of entry into the country, visa applications for foreign nationals. These services help detecting and apprehending those that have breached the border and removing them, or pursuing those in breach of immigration and criminal laws.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "HEALTH SERVICES",
+    "definition": "Health Services of a country ensure that standards pertaining to health and hygiene are adhered to such services conduct periodic and random checks ensuring the compliance of health regulations. It also comprises of a quarantine section which can used to isolate persons with suspected or confirmed contagious diseases or during an outbreak of such a disease. Note: All crew members shall be personally responsible / liable for validation of documents required when operating an international sector i.e. Passport, General",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "TAXI",
+    "definition": "Is the aircraft\u2019s movement on the ground under its own power, except during take-off and landing.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "TAKE OFF",
+    "definition": "The act of beginning a flight, in which the aircraft is accelerated from a state of rest to a height of 1500 feet above ground level.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "CLIMB",
+    "definition": "Is the phase of flight during which the aircraft altitude increases continuously along a flight path.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "CRUISE",
+    "definition": "Straight and level flight of an aircraft maintaining a constant altitude is termed as cruising.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "DESCEND",
+    "definition": "Is the continuous decrease in aircraft altitude along a flight path.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "APPROACH",
+    "definition": "Is the process of manoeuvring the aircraft towards the designated runway for the purpose of landing.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "LANDING",
+    "definition": "Is the final phase of flight in which the aircraft is manoeuvred in a smooth gradient in order to touch down on the runway and bring the aircraft to a complete stop in a controlled manner.",
+    "aliases": [],
+    "pdf_page": 118
+  },
+  {
+    "term": "A/C",
+    "definition": "Aircraft",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "EPSU",
+    "definition": "Emergency Power Supply Unit",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AAP",
+    "definition": "Additional Attendant Panel",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "F/O",
+    "definition": "First Officer",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AED",
+    "definition": "Automated External Defibrillator",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "FAA",
+    "definition": "Federal Aviation Administration",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "ACP",
+    "definition": "Area Call Panel",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "FLT",
+    "definition": "Flight",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "ABP",
+    "definition": "Able Bodied Passenger",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "FWD",
+    "definition": "Forward",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AFT",
+    "definition": "Rear",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AME",
+    "definition": "Aircraft Maintenance Engineer",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AIP",
+    "definition": "Attendant Indication Panel",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "INOP",
+    "definition": "Inoperative",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AMU",
+    "definition": "Audio Management Unit",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "INT",
+    "definition": "Interphone",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "AOC",
+    "definition": "Air Operator Certificate",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "LAV",
+    "definition": "Lavatory",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "APU",
+    "definition": "Auxiliary Power Unit",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "LRBL",
+    "definition": "Least Risk Bomb Location",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "ATC",
+    "definition": "Air Traffic Control",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "LSU",
+    "definition": "Lavatory Service Unit",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "BGM",
+    "definition": "Boarding Music",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "MEL",
+    "definition": "Minimum Equipment List",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CC",
+    "definition": "Cabin Crew",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "OXY",
+    "definition": "Oxygen",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CCOM",
+    "definition": "Cabin Crew Operations Manual",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PA",
+    "definition": "Public Address",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CDLB",
+    "definition": "Cabin Defect Log Book",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PAX",
+    "definition": "Passenger",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CIDS",
+    "definition": "Cabin Inter- Communication Data",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "ECAM",
+    "definition": "Electronic Centralized Aircraft",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CPR",
+    "definition": "Cardio Pulmonary Resuscitation",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PBE",
+    "definition": "Protective Breathing Equipment",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CRM",
+    "definition": "Crew Resource Management",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PED",
+    "definition": "Portable Electronic Device",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "CVR",
+    "definition": "Cockpit Voice Recorder",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PIC",
+    "definition": "Pilot in Command",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "DFDR",
+    "definition": "Digital Flight Data Recorder",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PIU",
+    "definition": "Passenger Information Unit",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "ACARS",
+    "definition": "Aircraft Communications",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "EOD",
+    "definition": "Explosive Ordinance Disposal",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "ELT",
+    "definition": "Emergency Locator Transmitter",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "PSU",
+    "definition": "Passenger Service Unit",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "EMER",
+    "definition": "Emergency",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "UMNR",
+    "definition": "Unaccompanied Minor",
+    "aliases": [],
+    "pdf_page": 121
+  },
+  {
+    "term": "DUTY",
+    "definition": "Any task that cabin crew members are required by the operator to perform, including, for example, flight duty, administrative work, training, positioning and standby when it is likely to induce fatigue.",
+    "aliases": [],
+    "pdf_page": 206
+  },
+  {
+    "term": "DUTY PERIOD",
+    "definition": "At IndiGo, the duty period starts when a cabin crew member is required by an operator to report for, or to commence a duty and ends when that person is free from all duties.",
+    "aliases": [],
+    "pdf_page": 206
+  },
+  {
+    "term": "FLIGHT DUTY PERIOD",
+    "definition": "At IndiGo, the flight duty period is intended to cover continuous period of duty that always includes a flight or series of flight for a cabin crew member. It commences when a cabin crew member is required to report for duty and finishes when aeroplane finally comes to rest and the engines are shut down at the end of the last flight on which he/she is a cabin crew member. (Chocks on plus 30 minutes).",
+    "aliases": [],
+    "pdf_page": 206
+  },
+  {
+    "term": "FLIGHT TIME",
+    "definition": "The total time from the moment an aeroplane first moves for the purpose of taking off until the moment it finally comes to rest at the end of the flight. Note: \u201cFlight time\u201d is defined as synonymous with the term \u201cblock-to-block\u201d time or \u201cchocks-to-chocks\u201d time in general usage, which is measured from the time an aeroplane first moves for the purpose of take-off until it finally stops at the end of the flight",
+    "aliases": [],
+    "pdf_page": 206
+  },
+  {
+    "term": "FATIGUE",
+    "definition": "A physiological state of reduced mental or physical performance capability resulting from sleep loss or extended wakefulness, circadian phase, or Work-load (mental and/or physical activity) that can impair a crew member\u2019s alertness and ability to safely operate an aircraft or perform safety related duties.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "HOME BASE",
+    "definition": "The location nominated by the operator to the crew member from where the crew member normally starts and ends a flight duty or a series of flight duty periods.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "LOCAL NIGHT",
+    "definition": "IndiGo shall take the period between 0000 hours and 0800 hours local time as the local night.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "POSITIONING",
+    "definition": "The transferring of a non-operating crew member from place to place at the behest of the operator.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "REPORTING TIME",
+    "definition": "IndiGo has an automated check in system in place for capturing actual crew reporting times. For the purpose of FDTL calculation, the standard reporting time (as mentioned in IndiGo\u2019s scheme for Duty period) shall be accepted. Reporting time shall be D-60 for domestic flights and D-75 for International flights.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "REST PERIOD",
+    "definition": "An uninterrupted and defined period of time during which a crew member is free from all duties.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "RESERVE",
+    "definition": "A period of time during which a cabin crew member is required by the operator to be available to receive assignment for Flight Duty Period, positioning or other duty notified at least 10 hours in advance.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "ROSTER",
+    "definition": "A list provided by an operator of the times when a cabin crew member is required to undertake duties. Note: \u201cRoster\u201d as here defined is synonymous with \u201cSchedule\u201d, \u201cLine of Time\u201d, \u201cPattern\u201d, and Rotation\u201d.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "SPLIT DUTY (BREAK)",
+    "definition": "A period free of all duties, which counts as duty, being less than a rest period.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "STANDBY",
+    "definition": "It is a defined period of time during which a cabin crew member is required by the operator to be available to receive an assignment for a specific duty With-out an intervening rest period.",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "UNFORESEEN OPERATIONAL CIRCUMSTANCE",
+    "definition": "An unplanned event, such as unforeseen weather, natural calamity, medical emergency, national requirement for relief and rescue operations (mission oriented), equipment",
+    "aliases": [],
+    "pdf_page": 207
+  },
+  {
+    "term": "ULTRA LONG RANGE (ULR) OPERATIONS",
+    "definition": "Continuous non-stop flights between a specific city pair involving any sector having a flight time of over 14 hours and duty periods from 18 hours up to 22 hours at any time during a calendar year taking into account the mean and seasonal wind changes. The ULR operations apply to both sectors of a city pair.",
+    "aliases": [],
+    "pdf_page": 208
+  },
+  {
+    "term": "WINDOW OF CIRCADIAN LOW (WOCL)",
+    "definition": "WOCL is best estimated by the hours between 02:00 and 05:59 for individuals adapted to a usual day- wake/night sleep schedule. This estimate of the window is calculated from scientific data on the circadian low of performance, alertness, subject report (i.e. peak fatigue) and body temperature. \uf0d8 For flight duty periods that cross 3 or fewer time zones, the window of circadian low is estimated to be 02:00 to 05:59 home-base/",
+    "aliases": [],
+    "pdf_page": 208
+  },
+  {
+    "term": "SPLIT DUTY",
+    "definition": "Split duty shall be as follows: Table 3.1C CONSECUTIVE HOURS OF BREAK MAXIMUM EXTENSION OF THE FLIGHT DUTY TIME",
+    "aliases": [],
+    "pdf_page": 210
+  },
+  {
+    "term": "WEEKLY REST",
+    "definition": "IndiGo shall ensure that the minimum weekly rest of continuous 36 hours including two local nights is provided such that there shall never be more than 168 hours between the end of one weekly rest period and the start of the next. Note 1: IndiGo shall provide weekly rest at home base. Note 2: If the same is not possible due to unforeseen circumstances (as indicated in unforeseen operational circumstances), the cabin crew member shall be given 12 hours additional rest for every 24 consecutive hours on return to home base on the first available",
+    "aliases": [],
+    "pdf_page": 211
+  },
+  {
+    "term": "AIMS",
+    "definition": "Scheduling Software",
+    "aliases": [],
+    "pdf_page": 218
+  }
+]

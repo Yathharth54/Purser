@@ -1,0 +1,386 @@
+[
+  {
+    "part": "Front Matter",
+    "section": null,
+    "title": "Manual Administration",
+    "pdf_page_from": 1,
+    "pdf_page_to": 26,
+    "pages": 26
+  },
+  {
+    "part": "PART ONE",
+    "section": null,
+    "title": "Aviation Indoctrination",
+    "pdf_page_from": 27,
+    "pdf_page_to": 28,
+    "pages": 2
+  },
+  {
+    "part": "PART ONE",
+    "section": "1.1",
+    "title": "Regulatory Overview",
+    "pdf_page_from": 29,
+    "pdf_page_to": 102,
+    "pages": 74
+  },
+  {
+    "part": "PART ONE",
+    "section": "1.2",
+    "title": "Aviation Terminology",
+    "pdf_page_from": 103,
+    "pdf_page_to": 122,
+    "pages": 20
+  },
+  {
+    "part": "PART ONE",
+    "section": "1.3",
+    "title": "Theory of Flight",
+    "pdf_page_from": 123,
+    "pdf_page_to": 132,
+    "pages": 10
+  },
+  {
+    "part": "PART ONE",
+    "section": "1.4",
+    "title": "Physiology of Flight",
+    "pdf_page_from": 133,
+    "pdf_page_to": 140,
+    "pages": 8
+  },
+  {
+    "part": "PART TWO",
+    "section": null,
+    "title": "Roles and Responsibilities",
+    "pdf_page_from": 141,
+    "pdf_page_to": 142,
+    "pages": 2
+  },
+  {
+    "part": "PART TWO",
+    "section": "2.1",
+    "title": "Air Operator",
+    "pdf_page_from": 143,
+    "pdf_page_to": 170,
+    "pages": 28
+  },
+  {
+    "part": "PART TWO",
+    "section": "2.2",
+    "title": "Crew Members",
+    "pdf_page_from": 171,
+    "pdf_page_to": 188,
+    "pages": 18
+  },
+  {
+    "part": "PART TWO",
+    "section": "2.3",
+    "title": "DGCA Inspectors",
+    "pdf_page_from": 189,
+    "pdf_page_to": 194,
+    "pages": 6
+  },
+  {
+    "part": "PART THREE",
+    "section": null,
+    "title": "Safety Procedures",
+    "pdf_page_from": 195,
+    "pdf_page_to": 196,
+    "pages": 2
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.1",
+    "title": "Common Terminology",
+    "pdf_page_from": 197,
+    "pdf_page_to": 222,
+    "pages": 26
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.2",
+    "title": "Crew Co-ordination and Communication",
+    "pdf_page_from": 223,
+    "pdf_page_to": 230,
+    "pages": 8
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.3",
+    "title": "Briefings",
+    "pdf_page_from": 231,
+    "pdf_page_to": 246,
+    "pages": 16
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.4",
+    "title": "Safety Checks",
+    "pdf_page_from": 247,
+    "pdf_page_to": 282,
+    "pages": 36
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.5",
+    "title": "Passenger Handling",
+    "pdf_page_from": 283,
+    "pdf_page_to": 386,
+    "pages": 104
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.6",
+    "title": "Passenger and Crew Member Seats and Restraints",
+    "pdf_page_from": 387,
+    "pdf_page_to": 398,
+    "pages": 12
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.7",
+    "title": "Carry \u2013 On Baggage",
+    "pdf_page_from": 399,
+    "pdf_page_to": 406,
+    "pages": 8
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.8",
+    "title": "Electronic devices",
+    "pdf_page_from": 407,
+    "pdf_page_to": 420,
+    "pages": 14
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.9",
+    "title": "Fuelling with Passengers On Board and or While",
+    "pdf_page_from": 421,
+    "pdf_page_to": 428,
+    "pages": 8
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.10",
+    "title": "Pre Take Off and Pre Landing",
+    "pdf_page_from": 429,
+    "pdf_page_to": 456,
+    "pages": 28
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.11",
+    "title": "Apron Safety",
+    "pdf_page_from": 457,
+    "pdf_page_to": 462,
+    "pages": 6
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.12",
+    "title": "Turbulence",
+    "pdf_page_from": 463,
+    "pdf_page_to": 476,
+    "pages": 14
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.13",
+    "title": "Crew Member Incapacitation",
+    "pdf_page_from": 477,
+    "pdf_page_to": 488,
+    "pages": 12
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.14",
+    "title": "Flight Deck Protocol",
+    "pdf_page_from": 489,
+    "pdf_page_to": 504,
+    "pages": 16
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.15",
+    "title": "Fuel Dumping",
+    "pdf_page_from": 505,
+    "pdf_page_to": 510,
+    "pages": 6
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.16",
+    "title": "Post Flight Duties",
+    "pdf_page_from": 511,
+    "pdf_page_to": 516,
+    "pages": 6
+  },
+  {
+    "part": "PART THREE",
+    "section": "3.17",
+    "title": "Oxygen Administration",
+    "pdf_page_from": 517,
+    "pdf_page_to": 522,
+    "pages": 6
+  },
+  {
+    "part": "PART FOUR",
+    "section": null,
+    "title": "Emergency Procedures",
+    "pdf_page_from": 523,
+    "pdf_page_to": 524,
+    "pages": 2
+  },
+  {
+    "part": "PART FOUR",
+    "section": "4.1",
+    "title": "Fire Fighting",
+    "pdf_page_from": 525,
+    "pdf_page_to": 546,
+    "pages": 22
+  },
+  {
+    "part": "PART FOUR",
+    "section": "4.2",
+    "title": "Smoke/Fumes In The Cabin",
+    "pdf_page_from": 547,
+    "pdf_page_to": 554,
+    "pages": 8
+  },
+  {
+    "part": "PART FOUR",
+    "section": "4.3",
+    "title": "Rapid and slow decompression (Pressurization",
+    "pdf_page_from": 555,
+    "pdf_page_to": 566,
+    "pages": 12
+  },
+  {
+    "part": "PART FOUR",
+    "section": "4.4",
+    "title": "Evacuations",
+    "pdf_page_from": 567,
+    "pdf_page_to": 646,
+    "pages": 80
+  },
+  {
+    "part": "PART FIVE",
+    "section": "5.1",
+    "title": "Emergency Equipment",
+    "pdf_page_from": 647,
+    "pdf_page_to": 748,
+    "pages": 102
+  },
+  {
+    "part": "PART SIX",
+    "section": null,
+    "title": "Aircraft Specific (AIRBUS)",
+    "pdf_page_from": 749,
+    "pdf_page_to": 750,
+    "pages": 2
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.1",
+    "title": "PHYSICAL DESCRIPTION",
+    "pdf_page_from": 751,
+    "pdf_page_to": 836,
+    "pages": 86
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.2",
+    "title": "GALLEYS",
+    "pdf_page_from": 837,
+    "pdf_page_to": 858,
+    "pages": 22
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.3",
+    "title": "Communication Systems",
+    "pdf_page_from": 859,
+    "pdf_page_to": 876,
+    "pages": 18
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.4",
+    "title": "Lighting Systems",
+    "pdf_page_from": 877,
+    "pdf_page_to": 886,
+    "pages": 10
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.5",
+    "title": "Water and Waste Systems",
+    "pdf_page_from": 887,
+    "pdf_page_to": 896,
+    "pages": 10
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.6",
+    "title": "Air Conditioning and Ventilation systems",
+    "pdf_page_from": 897,
+    "pdf_page_to": 906,
+    "pages": 10
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.7",
+    "title": "Exits",
+    "pdf_page_from": 907,
+    "pdf_page_to": 966,
+    "pages": 60
+  },
+  {
+    "part": "PART SIX",
+    "section": "6.8",
+    "title": "Unique Features",
+    "pdf_page_from": 967,
+    "pdf_page_to": 988,
+    "pages": 22
+  },
+  {
+    "part": "PART SEVEN",
+    "section": null,
+    "title": "First Aid",
+    "pdf_page_from": 989,
+    "pdf_page_to": 1110,
+    "pages": 122
+  },
+  {
+    "part": "PART EIGHT",
+    "section": null,
+    "title": "Crew Resource Management",
+    "pdf_page_from": 1111,
+    "pdf_page_to": 1138,
+    "pages": 28
+  },
+  {
+    "part": "PART NINE",
+    "section": null,
+    "title": "Dangerous Goods",
+    "pdf_page_from": 1139,
+    "pdf_page_to": 1188,
+    "pages": 50
+  },
+  {
+    "part": "PART TEN",
+    "section": null,
+    "title": "Circulars",
+    "pdf_page_from": 1189,
+    "pdf_page_to": 1196,
+    "pages": 8
+  },
+  {
+    "part": "Annexures",
+    "section": null,
+    "title": "SAFETY AND EMERGENCY PROCEDURES MANUAL",
+    "pdf_page_from": 1197,
+    "pdf_page_to": 1226,
+    "pages": 30
+  }
+]
