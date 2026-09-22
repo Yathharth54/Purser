@@ -9,8 +9,11 @@ DIMS = 384
 class Embedder:
     """Local sentence embeddings. No API key, no network at query time.
 
-    fastembed downloads the ONNX weights once on first construction and caches
-    them under ~/.cache/fastembed.
+    fastembed downloads the ONNX weights once on first construction. By default
+    it caches them under a system temp directory, which is not stable across
+    reboots or container layers; set the FASTEMBED_CACHE_PATH environment
+    variable (or pass cache_dir to TextEmbedding) to pin the cache to a fixed
+    location, e.g. so a Docker build-time warm-up step is not discarded.
     """
 
     def __init__(self, model_name: str = MODEL_NAME) -> None:

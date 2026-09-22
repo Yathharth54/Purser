@@ -26,14 +26,19 @@ def test_related_text_scores_higher_than_unrelated(embedder):
 
 
 def test_build_vectors_row_order_matches_pdf_page(tmp_path, embedder):
+    # pdf_page -> text, deliberately out of order so a missing sort in
+    # build_vectors would misalign rows and this test would catch it.
+    text_by_pdf_page = {1: "fire extinguisher", 2: "life raft", 3: "oxygen mask"}
     pages = [
         Page(pdf_page=n, part=PartName.FOUR, section="4.4", section_title="Evacuations",
              page_in_section=n, section_total=3, effective=date(2023, 5, 18),
-             revision=None, lines=[t], text=t)
-        for n, t in enumerate(["fire extinguisher", "life raft", "oxygen mask"], start=1)
+             revision=None, lines=[text_by_pdf_page[n]], text=text_by_pdf_page[n])
+        for n in [3, 1, 2]
     ]
     out = tmp_path / "vectors.npy"
     build_vectors(pages, out, embedder=embedder)
     arr = np.load(out)
     assert arr.shape == (3, 384)
-    np.testing.assert_allclose(arr[0], embedder.encode(["fire extinguisher"])[0], atol=1e-5)
+    assert arr.dtype == np.float32
+    for n, text in text_by_pdf_page.items():
+        np.testing.assert_allclose(arr[n - 1], embedder.encode([text])[0], atol=1e-5)
