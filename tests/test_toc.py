@@ -58,6 +58,20 @@ def test_sorts_by_pdf_page_before_grouping():
     assert toc[0].pages == 3
 
 
+def test_annexures_node_title_is_not_spliced_with_the_masthead():
+    """Real pp.1197-1226: the revision line's `pre` is empty there, so header
+    reassembly splices the masthead line above onto 'Annexures' below,
+    producing 'SAFETY AND EMERGENCY PROCEDURES MANUAL Annexures'. The node's
+    title must be plain 'Annexures', which is what the page actually says."""
+    pages = [
+        _page(i, PartName.ANNEX, None, "SAFETY AND EMERGENCY PROCEDURES MANUAL Annexures", i, 2)
+        for i in (1, 2)
+    ]
+    toc = build_toc(pages)
+    assert len(toc) == 1
+    assert toc[0].title == "Annexures"
+
+
 def test_repeated_section_key_across_a_gap_raises():
     """A section that reappears in a second, non-contiguous block of pages must
     fail loudly rather than silently produce two nodes for the same key."""

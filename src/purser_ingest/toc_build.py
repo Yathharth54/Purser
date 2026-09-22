@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from itertools import groupby
 
-from purser_core.models import Page, TocNode
+from purser_core.models import Page, PartName, TocNode
 
 
 def build_toc(pages: list[Page]) -> list[TocNode]:
@@ -29,6 +29,15 @@ def build_toc(pages: list[Page]) -> list[TocNode]:
 
         block = list(group)
         title = next((p.section_title for p in block if p.section_title), None)
+        if part is PartName.ANNEX:
+            # On these pages the revision line's `pre` is empty, so header
+            # reassembly splices the masthead line above onto "Annexures"
+            # below, producing "SAFETY AND EMERGENCY PROCEDURES MANUAL
+            # Annexures" -- that's not this section's title, it's the page
+            # masthead run together with what the page actually says. This is
+            # narrowly scoped to the Annexures node; masthead-as-title on
+            # other unsectioned parts is a separate, pre-existing defect.
+            title = "Annexures"
         nodes.append(
             TocNode(
                 part=part,
