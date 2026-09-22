@@ -303,13 +303,47 @@ vocabulary gap in this document is terminology the document itself defines.
 ### 8.3 Public interface
 
 ```python
-def search(query: str, k: int = 8) -> list[SearchHit]     # coordinates + snippet only
+def search(query: str, k: int = 8) -> list[SectionHit]    # k = number of SECTIONS
 def toc(part: PartName | None = None) -> list[TocNode]
 def read_section(section: str, page_from: int = 1, page_to: int | None = None) -> list[PageText]
 def read_page(pdf_page: int, before: int = 0, after: int = 0) -> list[PageText]
 def lookup_term(term: str) -> GlossaryEntry | None
 def page(pdf_page: int) -> Page                            # used by citation resolution
 ```
+
+### 8.4 Search returns sections, not pages — measured 2026-09-22
+
+`search` groups its fused page hits by section and returns **one row per section**,
+best-first, each carrying the pages that matched and a snippet from the best of them.
+It narrows; it does not choose. Choosing is the agent's job, and the agent has
+`read_section` and `read_page` to go further.
+
+Measured against the 40-question eval set, recall of the correct section in the
+candidate set:
+
+| Candidates shown | Recall |
+| --- | --- |
+| 4 pages | 80.0% |
+| 8 pages (the original design) | 87.5% |
+| 12 pages | 90.0% |
+| **20 pages / 8 sections** | **97.5%** |
+| 30+ pages | 97.5% (plateau) |
+
+Widening the window from 8 to 20 underlying pages costs roughly 1,200 tokens and moves
+recall 10 points. For comparison, a full sweep of RRF's `k` (5→60) and lane depth
+(20→100) moved ±1–2 questions — noise at n=40. **The candidate window was the lever;
+the fusion constants were not.** Do not tune `RRF_K` or `_LANE_DEPTH` without evidence
+that beats this baseline.
+
+Grouping by section rather than returning a flat page list also removes a structural
+bias: a large section (§3.5 is 104 pages) can otherwise flood a flat list with mediocre
+hits and crowd out a small section with one excellent hit. Grouped, each section
+occupies exactly one row however many pages it matched.
+
+The trade is deliberate: a wider candidate set gives the agent more chances to open the
+wrong door, but the safety contract already requires it to read a section before citing
+it, so a wrong candidate costs one tool call rather than a wrong answer. Recall is
+expensive to lose; precision is recoverable by reading.
 
 `search` returns snippets, never full pages. Reading is a separate, explicit act — that
 separation is what makes the agent read a neighbourhood in order rather than assemble an
