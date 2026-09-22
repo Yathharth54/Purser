@@ -43,3 +43,75 @@ def test_ignores_pages_outside_the_terminology_sections():
         lines=["ABP – this is body text, not a glossary"], text="x",
     )
     assert mine_glossary([page]) == []
+
+
+def test_merges_multiline_prose_definition():
+    page = _page(107, [
+        "     CABIN CREW: A crew member other than a flight crew member detailed to carry out",
+        "     such duties as may be assigned, in the interests of safety of the passengers, by the",
+        "     operator or the pilot in command of the aircraft.",
+    ])
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert entries["CABIN CREW"] == (
+        "A crew member other than a flight crew member detailed to carry out such duties "
+        "as may be assigned, in the interests of safety of the passengers, by the operator "
+        "or the pilot in command of the aircraft."
+    )
+
+
+def test_merge_stops_at_blank_line():
+    page = _page(108, [
+        "TIME ZONE: Is a region of the earth that has adopted",
+        "the same standard time.",
+        "",
+        "This line must not be appended to the definition above.",
+    ])
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert entries["TIME ZONE"] == "Is a region of the earth that has adopted the same standard time."
+
+
+def test_merge_stops_at_next_term_definition():
+    page = _page(107, [
+        "CABIN CREW: A crew member other than a flight crew member detailed to carry out",
+        "such duties as may be assigned.",
+        "SENIOR CABIN CREW: The Senior Cabin Crew is a senior cabin crew who has overall",
+        "responsibility for cabin safety.",
+    ])
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert entries["CABIN CREW"] == (
+        "A crew member other than a flight crew member detailed to carry out such duties "
+        "as may be assigned."
+    )
+    assert entries["SENIOR CABIN CREW"] == (
+        "The Senior Cabin Crew is a senior cabin crew who has overall responsibility for "
+        "cabin safety."
+    )
+
+
+def test_rejects_note_markers():
+    page = _page(211, [
+        "NOTE1: If the preceding duty period exceeds 18 hours, then the rest period shall "
+        "include a local night.",
+        "NOTE2: Period of transportation shall not be counted towards duty time.",
+    ])
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert "NOTE1" not in entries
+    assert "NOTE2" not in entries
+
+
+def test_rejects_single_letter_terms():
+    page = _page(119, ["      P – Papa"])
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert "P" not in entries
+
+
+def test_abbreviation_table_columns_not_merged_across_rows():
+    page = _page(121, [
+        "  ABP – Able Bodied Passenger                  PAX – Passenger",
+        "  PBE – Protective Breathing Equipment         CIDS – Cabin Inter- Communication Data",
+    ])
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert entries["ABP"] == "Able Bodied Passenger"
+    assert entries["PAX"] == "Passenger"
+    assert entries["PBE"] == "Protective Breathing Equipment"
+    assert entries["CIDS"] == "Cabin Inter- Communication Data"
