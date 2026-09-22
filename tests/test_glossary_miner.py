@@ -4,6 +4,21 @@ from purser_core.models import Page, PartName
 from purser_ingest.glossary_miner import mine_glossary
 
 
+def _sec31_page(pdf_page, lines):
+    return Page(
+        pdf_page=pdf_page,
+        part=PartName.THREE,
+        section="3.1",
+        section_title="Common Terminology",
+        page_in_section=1,
+        section_total=20,
+        effective=date(2023, 5, 18),
+        revision=None,
+        lines=lines,
+        text="\n".join(lines),
+    )
+
+
 def _page(pdf_page, lines):
     return Page(
         pdf_page=pdf_page,
@@ -172,3 +187,23 @@ def test_malformed_abbreviation_row_does_not_corrupt_the_open_entry_in_its_colum
     assert entries["EMER"] == "Emergency"
     assert entries["UMNR"] == "Unaccompanied Minor"
     assert "FAP" not in entries
+
+
+def test_lone_hyphenated_prose_line_in_terminology_prose_is_not_merged_across_the_page():
+    """Regression for real pdf_page 218 (Sec3.1): 'AIMS- Scheduling Software' is
+    body prose, not the p.121 two-column table, but happens to false-positive the
+    _ABBR grammar. Sec3.1 is prose with a few TERM: lines (spec Sec6.5), not a
+    table, so this must record as a single line and must never open a multi-row
+    merge that swallows the surrounding paragraphs -- before the last wave added
+    the merge loop, and correctly, AIMS's definition was just 'Scheduling
+    Software'."""
+    page = _sec31_page(
+        218,
+        [
+            "AIMS- Scheduling Software",
+            "IndiGo shall use the services of AIMS software to track all changes",
+            "made to crew rosters and maintain records as required by DGCA.",
+        ],
+    )
+    entries = {e.term: e.definition for e in mine_glossary([page])}
+    assert entries["AIMS"] == "Scheduling Software"

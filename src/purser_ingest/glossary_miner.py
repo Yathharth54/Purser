@@ -140,6 +140,21 @@ def mine_glossary(pages: list[Page]) -> list[GlossaryEntry]:
                 _record(entries, term, defn, page.pdf_page)
                 continue
 
+            # A lone "TERM- definition" line can false-positive the abbreviation
+            # grammar outside the real table (real pdf_page 218, Sec3.1: "AIMS-
+            # Scheduling Software" is body prose that happens to match _ABBR).
+            # Section 3.1 is prose with a few TERM: lines (spec Sec6.5), not the
+            # two-column table -- that only exists in Sec1.2 (real p.121). Record
+            # such a line as a single row, exactly like the pre-merge behaviour,
+            # rather than opening a multi-row merge with nothing to bound it.
+            if _is_abbr_row(stripped) and page.section != "1.2":
+                for chunk in _split_columns(stripped):
+                    if m := _ABBR.match(chunk):
+                        _record(
+                            entries, m.group("term").strip(), m.group("defn").strip(), page.pdf_page
+                        )
+                continue
+
             # Two-column abbreviation table. Each column wraps independently: a
             # continuation line has no "-" separator in that column and belongs
             # to whichever entry is currently open in that SAME column. Consume
@@ -151,6 +166,7 @@ def mine_glossary(pages: list[Page]) -> list[GlossaryEntry]:
                 open_entries: dict[int, tuple[str, list[str]]] = {}
 
                 j = i - 1  # re-examine the row already consumed above
+                continuation_streak = 0  # cap so a bad match can't swallow the rest of the page
                 while j < n:
                     row = lines[j]
                     row_stripped = row.strip()
@@ -160,21 +176,27 @@ def mine_glossary(pages: list[Page]) -> list[GlossaryEntry]:
                     if not row_cells:
                         break
                     matched_any = False
+                    opened_new_entry = False
                     for col, text in row_cells:
                         if m := _ABBR.match(text):
                             _flush_open_entry(open_entries, col, entries, page.pdf_page)
                             open_entries[col] = (m.group("term").strip(), [m.group("defn").strip()])
                             matched_any = True
+                            opened_new_entry = True
                         elif _ABBR_LIKE_BUT_MALFORMED.match(text):
                             # Not a valid entry and not prose either -- close out
                             # whatever was open in this column rather than
                             # silently absorbing it as a continuation.
                             _flush_open_entry(open_entries, col, entries, page.pdf_page)
                             matched_any = True
+                            opened_new_entry = True
                         elif col in open_entries:
                             open_entries[col][1].append(text)
                             matched_any = True
                     if not matched_any:
+                        break
+                    continuation_streak = 0 if opened_new_entry else continuation_streak + 1
+                    if continuation_streak > _MAX_CONTINUATION_LINES:
                         break
                     j += 1
 
