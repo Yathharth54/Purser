@@ -21,7 +21,7 @@ from purser_core.models import Block
 BULLET_GLYPHS = "•"
 _NUM_HEAD = re.compile(r"^(\d+(?:\.\d+)*)\.\s+\S")
 _NOTE = re.compile(r"^(Note|Caution|Warning|NOTE|CAUTION|WARNING)\s*[:\-]\s*\S")
-_TABLE_CAP = re.compile(r"^Table\s+[\d.]+\s*[A-Z]?\s*$", re.IGNORECASE)
+_TABLE_CAP = re.compile(r"^Table\s+[\d.]+\s?[A-Z]{0,2}\d?\b.{0,40}$", re.IGNORECASE)
 
 
 def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:

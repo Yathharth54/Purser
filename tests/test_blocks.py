@@ -119,6 +119,30 @@ def test_a_table_does_not_swallow_the_rest_of_the_page():
 
 
 @needs_index
+def test_a_caption_with_an_aircraft_suffix_still_opens_its_table():
+    """'Table 4.4Y (A-320)' must open a table, not fall through to prose.
+
+    On pdf_page 631, the caption is followed by the emergency-assignment grid
+    (Position | Duties and assignments) -- who does what during an
+    evacuation, and A-320 vs A-321 changes door and equipment layout. A
+    caption regex that only accepts a single trailing letter ('Table 4.4B')
+    misses the '(A-320)' suffix entirely, so the caption is never recognised,
+    no table opens, and the whole two-column grid renders as run-together
+    bullets/para -- exactly the failure this parser exists to eliminate, on
+    the highest-stakes content in the manual.
+    """
+    page = Corpus("data").page(631)
+    out = parse_blocks(page.lines, page.chrome)
+    captions = [b.text for b in out if b.kind == "caption"]
+    assert "Table 4.4Y (A-320)" in captions
+    tables = [b for b in out if b.kind == "table"]
+    assert len(tables) == 1
+    assert "Position" in tables[0].text
+    assert "Duties and assignments" in tables[0].text
+    assert "Captain" in tables[0].text
+
+
+@needs_index
 def test_no_content_is_lost_anywhere_in_the_corpus():
     """Every non-blank, non-chrome line must survive into some block.
 
