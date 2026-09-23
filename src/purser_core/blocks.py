@@ -71,7 +71,7 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
     prev_len = 0
     in_table = False
     table: list[str] = []
-    table_indent: int | None = None  # indent of the table's first row
+    table_indent: int | None = None  # the table's left edge: the lowest row indent so far
 
     def close_table() -> None:
         nonlocal in_table, table, table_indent
@@ -117,8 +117,8 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
 
         if in_table:
             # A table ends when a line's indent falls more than 2 columns below
-            # the indent of the table's own first row -- UNLESS that line still
-            # looks like a table row. The first row is not always representative
+            # the table's left edge -- UNLESS that line still looks like a
+            # table row. The first row is not always representative
             # of the table's left edge: a centred header label (pdf_page 613,
             # "A-320          A-321") can sit far to the right of the body rows
             # it labels, and indent-drop alone would close the table right after
@@ -134,6 +134,16 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             if table_indent is None or indent >= table_indent - 2 or looks_like_row:
                 if table_indent is None:
                     table_indent = indent
+                elif looks_like_row:
+                    # The body, not the first row, defines the table's left
+                    # edge: the first row is often a centred header (pdf_page
+                    # 596), and a body row whose right cell is empty has no
+                    # column gap left to vouch for it. Only a line that looks
+                    # like a row may lower the edge. This is safe only because
+                    # a heading closes a table before this test is reached --
+                    # once the edge reaches column 0-2 the indent test can no
+                    # longer fail.
+                    table_indent = min(table_indent, indent)
                 table.append(raw.rstrip())
                 continue
             close_table()

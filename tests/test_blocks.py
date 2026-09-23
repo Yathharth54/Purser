@@ -255,3 +255,20 @@ def test_a_subsection_heading_closes_the_table_above_it():
     [table] = [b for b in out if b.kind == "table"]
     assert "3 POINT BRIEFING" not in table.text
     assert "Where: The distance" not in table.text
+
+
+@needs_index
+def test_a_body_row_with_an_empty_right_cell_does_not_close_the_table():
+    """pdf_page 596, 'Table 4.4F': the first row is a centred header at indent 9 and
+    the body sits at indent 0. Line 42 ('automatically, I will push it with force
+    to') is a left cell whose right cell is empty -- no column gap. Measuring the
+    table's left edge from the header closed the table there and dropped the rest
+    of the evacuation briefing to prose. The right column repeats the same words,
+    so "it is in the table" alone proves nothing; it must not ALSO be a para.
+    """
+    page = Corpus("data").page(596)
+    line = page.lines[42].strip()
+    assert line == "automatically, I will push it with force to"
+    out = parse_blocks(page.lines, page.chrome)
+    assert not [b for b in out if b.kind == "para" and line in b.text]
+    assert [b for b in out if b.kind == "table" and line in b.text]
