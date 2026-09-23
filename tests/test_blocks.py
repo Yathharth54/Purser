@@ -97,6 +97,28 @@ def test_page_552_parses_into_the_expected_shape():
 
 
 @needs_index
+def test_a_table_does_not_swallow_the_rest_of_the_page():
+    """A runaway table must not absorb everything below it for the rest of the page.
+
+    On pdf_page 594, 'Table 4.4D' is exactly two rows (SIGNAL FOR BRACE / COMMANDS).
+    Everything from 'Planned Emergency (Ditching)' onward -- prose plus a nine-step
+    bulleted procedure -- is NOT part of that table. A parser that only closes a
+    table on a fresh caption or a margin-numbered heading never sees a reason to
+    stop, and swallows the whole rest of the page into one monospace table block:
+    exactly the "reads like a scan" failure this parser exists to eliminate,
+    reproduced *inside* a table.
+    """
+    page = Corpus("data").page(594)
+    out = parse_blocks(page.lines, page.chrome)
+    tables = [b for b in out if b.kind == "table"]
+    assert len(tables) == 1
+    assert "Step 1" not in tables[0].text
+    assert "Ditching" not in tables[0].text
+    steps = [b.text for b in out if b.kind == "bullet" and b.text.startswith("Step ")]
+    assert len(steps) == 9
+
+
+@needs_index
 def test_no_content_is_lost_anywhere_in_the_corpus():
     """Every non-blank, non-chrome line must survive into some block.
 
