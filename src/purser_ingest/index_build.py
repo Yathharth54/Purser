@@ -5,7 +5,6 @@ import sqlite3
 from pathlib import Path
 
 from purser_core.models import Page
-from purser_ingest.chrome import chrome_line_indices
 
 _SCHEMA = """
 DROP TABLE IF EXISTS pages;
@@ -54,7 +53,7 @@ def build_index(pages: list[Page], db_path: Path) -> None:
                     p.effective.isoformat(),
                     p.revision,
                     json.dumps(p.lines),
-                    json.dumps(chrome_line_indices(p.lines)),
+                    json.dumps(p.chrome),
                     p.text,
                 )
                 for p in pages
