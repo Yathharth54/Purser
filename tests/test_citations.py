@@ -100,8 +100,27 @@ def test_leading_and_trailing_furniture_is_trimmed_from_a_citation(corpus):
     assert cite is not None
     assert "InterGlobe" not in cite.text.splitlines()[0]
     assert "NOT A CONTROLLED COPY" not in cite.text.splitlines()[0]
-    assert "Page 1 of" not in cite.text.splitlines()[-1]
+    # Page 600's real footer is "...Page 34 of 80...Effective 18 May 2023" --
+    # asserted against that literal, not a made-up one, so a regression that
+    # stops trimming the trailing edge actually fails this test.
+    assert "Page 34 of 80" not in cite.text.splitlines()[-1]
     assert "life raft" in cite.text
+
+
+def test_full_page_range_is_byte_exact_after_trimming(corpus):
+    """Restates the byte-exact splice guarantee this task's trim requires.
+
+    `Citation.text` being an exact splice of `Page.lines` is the one property
+    the whole coordinate-only citation design exists to provide. It has to be
+    pinned with exact equality on a page where the trim actually moves `lo`
+    and `hi` -- not just checked with `in`/substring assertions -- or a bug
+    that mangles the surviving window (drops a line, duplicates one, reorders
+    one) could still pass.
+    """
+    page = corpus.page(600)
+    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=len(page.lines)))
+    assert cite is not None
+    assert cite.text == "\n".join(page.lines[12:43])
 
 
 def test_interior_furniture_is_left_alone(corpus):
@@ -110,9 +129,16 @@ def test_interior_furniture_is_left_alone(corpus):
     Removing an interior line would make the quote a non-contiguous fabrication
     -- text that appears nowhere on the page in that order. Edges are safe; the
     middle is not ours to edit.
+
+    Page 15, not 600: page 600's chrome ([0, 5, 6, 9, 45]) all falls on the
+    edge of its citable window -- the trimmed window is 12:43, which contains
+    no chrome and no blank line, so a mutation that also stripped interior
+    chrome would have nothing to strip and this test would pass for the wrong
+    reason. Page 15's chrome ([5, 6, 48]) survives inside its trimmed window
+    (0:46), so this actually exercises the "interior is untouched" guarantee.
     """
-    page = corpus.page(600)
-    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=len(page.lines)))
+    page = corpus.page(15)
+    cite = resolve(corpus, CiteRef(pdf_page=15, line_from=0, line_to=len(page.lines)))
     assert cite is not None
     assert cite.text in "\n".join(page.lines)
 
