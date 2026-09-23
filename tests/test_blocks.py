@@ -272,3 +272,64 @@ def test_a_body_row_with_an_empty_right_cell_does_not_close_the_table():
     out = parse_blocks(page.lines, page.chrome)
     assert not [b for b in out if b.kind == "para" and line in b.text]
     assert [b for b in out if b.kind == "table" and line in b.text]
+
+
+# --- notes, cautions, warnings ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Note 1: Do not use any subjective words like think, feel etc.",
+        "Note: 1: Cabin crew covered by table 1.1O, whose weekly rest is due",
+        "Note — Liquid may turn to steam when applied to a hot surface",
+        "Note. — Actions should occur simultaneously",
+        "Caution: Do not open the door",
+        "WARNING - Oxygen supports combustion",
+    ],
+)
+def test_note_labels_with_a_number_or_dash_are_notes(line):
+    [b] = parse_blocks([line], [])
+    assert (b.kind, b.text) == ("note", line)
+
+
+def test_note_used_as_a_verb_is_not_a_note():
+    [b] = parse_blocks(["Note the FAPs on some of the aircraft do not have"], [])
+    assert b.kind == "para"
+
+
+def test_a_bare_note_label_adopts_the_line_below_as_its_body():
+    """pdf_page 152: 'Note:' alone on its line, its body on the next line."""
+    out = parse_blocks(
+        [
+            "Note:",
+            "For duties & Responsibilities of Safety Manager, refer Chapter 6",
+        ],
+        [],
+    )
+    assert [(b.kind, b.text) for b in out] == [
+        ("note", "Note: For duties & Responsibilities of Safety Manager, refer Chapter 6")
+    ]
+
+
+def test_a_bare_note_label_does_not_swallow_a_bullet_below_it():
+    """pdf_page 260: 'Note:' introduces a bulleted list; the bullets stay bullets."""
+    out = parse_blocks(["Note:", "    " + BULLET + "   During the pre-flight check, check it"], [])
+    assert [b.kind for b in out] == ["note", "bullet"]
+    assert out[0].text == "Note:"
+
+
+@needs_index
+def test_a_page_level_note_closes_the_table_above_it():
+    """pdf_page 366: 'Table 3.5Y' is followed by a full-width 'Note:' and then the
+    '3. ADVISORY ...' section. Neither is a table row; the note carries safety
+    emphasis and must render as a note."""
+    page = Corpus("data").page(366)
+    out = parse_blocks(page.lines, page.chrome)
+    [table] = [b for b in out if b.kind == "table"]
+    assert "the cabin shall never be sprayed" not in table.text
+    assert any(
+        b.kind == "note" and b.text.startswith("Note: the cabin shall never be sprayed")
+        for b in out
+    )
+    assert any(b.kind == "heading" and "ADVISORY ON INSTANCES" in b.text for b in out)

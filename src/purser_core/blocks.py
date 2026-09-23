@@ -25,7 +25,10 @@ BULLET_GLYPHS = "•"
 _NUMBERED = re.compile(r"^(\d+\.(?:\d+\.)*\d*)\s+(\S.*)$")
 # Table-of-contents rows: dot leaders, or a trailing page range like "3-76".
 _TOC_ROW = re.compile(r"\.{5,}|\s\d+-\d+\s*$")
-_NOTE = re.compile(r"^(Note|Caution|Warning|NOTE|CAUTION|WARNING)\s*[:\-]\s*\S")
+# "Note:", "Note 1:", "Note -", "Note —", "Note. —". The punctuation is what
+# separates a label from "Note the FAPs..." (a verb). The body is optional: a
+# bare "Note:" on its own line takes the next line as its body.
+_NOTE = re.compile(r"^(Note|Caution|Warning|NOTE|CAUTION|WARNING)(\s*\d+)?\s*[:\-—.]")
 _TABLE_CAP = re.compile(r"^Table\s+[\d.]+\s?[A-Z]{0,2}\d?\b.{0,40}$", re.IGNORECASE)
 # A line "looks like a table row" when it has an internal multi-space column
 # gap and does not open with a bullet glyph -- see the indent-drop comment
@@ -72,6 +75,7 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
     in_table = False
     table: list[str] = []
     table_indent: int | None = None  # the table's left edge: the lowest row indent so far
+    pending_note = False  # the last block is a bare "Note:" still waiting for its body
 
     def close_table() -> None:
         nonlocal in_table, table, table_indent
@@ -97,6 +101,8 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
                 table.append("")
             prev_len = 0  # a blank line always ends a wrapped run
             continue
+
+        awaiting_body, pending_note = pending_note, False
 
         if _TABLE_CAP.match(stripped):
             close_table()
@@ -131,7 +137,20 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             looks_like_row = _ROW_GAP.search(raw.rstrip()) is not None and (
                 stripped[0] not in BULLET_GLYPHS
             )
-            if table_indent is None or indent >= table_indent - 2 or looks_like_row:
+            # A note label at the table's left edge with no column gap beside it
+            # is a note ABOUT the table, not a cell in it (pdf_page 366). A note
+            # set inside a column (pdf_pages 289, 814, 1144: well right of the
+            # edge) or with its neighbouring cell's text beside it stays a row.
+            # Known miss: pdf_page 622 has an in-cell note in the LEFT column
+            # with its right cell empty -- indistinguishable, so it exits.
+            note_exit = (
+                not looks_like_row
+                and _NOTE.match(stripped) is not None
+                and (table_indent is None or indent <= table_indent + 2)
+            )
+            if not note_exit and (
+                table_indent is None or indent >= table_indent - 2 or looks_like_row
+            ):
                 if table_indent is None:
                     table_indent = indent
                 elif looks_like_row:
@@ -149,6 +168,18 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             close_table()
             # fall through: reprocess this line through normal classification
 
+        # A bare "Note:" takes this line as its body -- unless the line is a
+        # list item or another note, which the label introduces instead.
+        if (
+            awaiting_body
+            and stripped[0] not in BULLET_GLYPHS
+            and not numbered
+            and not _NOTE.match(stripped)
+        ):
+            out[-1].text = f"{out[-1].text} {stripped}"
+            prev_len = len(raw.rstrip())
+            continue
+
         if stripped[0] in BULLET_GLYPHS:
             add("bullet", stripped[1:].strip(), indent, max(0, indent // 5 - 1))
             prev_len = len(raw.rstrip())
@@ -159,8 +190,10 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             prev_len = len(raw.rstrip())
             continue
 
-        if _NOTE.match(stripped):
+        note = _NOTE.match(stripped)
+        if note:
             add("note", stripped, indent)
+            pending_note = not stripped[note.end() :].strip()
             prev_len = len(raw.rstrip())
             continue
 
