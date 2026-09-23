@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Chat } from "./components/Chat";
 import { PageDrawer } from "./components/PageDrawer";
 import { TocBrowser } from "./components/TocBrowser";
+import { Wordmark } from "./components/Wordmark";
 import type { Citation } from "./api/types";
 import "./styles.css";
 
@@ -44,13 +45,43 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-head">
-        <h1>Purser</h1>
-        <nav className="tabs" aria-label="Sections">
-          <button className={tab === "chat" ? "on" : ""} onClick={() => setTab("chat")}>
+        <div className="head-row">
+          <Wordmark />
+          <span className="head-spacer" aria-hidden="true" />
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === "light" ? "cabin" : "light"))}
+            aria-label={theme === "light" ? "Switch to cabin reading mode" : "Switch to day mode"}
+          >
+            <span className="theme-toggle-icon" aria-hidden="true">
+              {theme === "light" ? "☾" : "☀"}
+            </span>
+          </button>
+        </div>
+        <div
+          className={tab === "manual" ? "seg seg-manual" : "seg"}
+          role="tablist"
+          aria-label="Sections"
+        >
+          <button
+            type="button"
+            role="tab"
+            id="tab-chat"
+            aria-selected={tab === "chat"}
+            aria-controls="panel-chat"
+            className={tab === "chat" ? "on" : undefined}
+            onClick={() => setTab("chat")}
+          >
             Ask
           </button>
           <button
-            className={tab === "manual" ? "on" : ""}
+            type="button"
+            role="tab"
+            id="tab-manual"
+            aria-selected={tab === "manual"}
+            aria-controls="panel-manual"
+            className={tab === "manual" ? "on" : undefined}
             onClick={() => {
               setSeenManual(true);
               setTab("manual");
@@ -58,15 +89,7 @@ export default function App() {
           >
             Manual
           </button>
-        </nav>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={() => setTheme((t) => (t === "light" ? "cabin" : "light"))}
-          aria-label={theme === "light" ? "Switch to cabin reading mode" : "Switch to day mode"}
-        >
-          {theme === "light" ? "Cabin" : "Day"}
-        </button>
+        </div>
       </header>
 
       {/* Both panes stay mounted and are hidden with CSS rather than swapped.
@@ -76,11 +99,23 @@ export default function App() {
           mid-procedure. Keeping it mounted also preserves scroll position.
           The manual pane is mounted lazily on first use, then kept. */}
       <main>
-        <div className="pane" style={{ display: tab === "chat" ? "flex" : "none" }}>
+        <div
+          className="pane"
+          id="panel-chat"
+          role="tabpanel"
+          aria-labelledby="tab-chat"
+          style={{ display: tab === "chat" ? "flex" : "none" }}
+        >
           <Chat onOpenCitation={setCitation} />
         </div>
         {seenManual && (
-          <div className="pane" style={{ display: tab === "manual" ? "flex" : "none" }}>
+          <div
+            className="pane"
+            id="panel-manual"
+            role="tabpanel"
+            aria-labelledby="tab-manual"
+            style={{ display: tab === "manual" ? "flex" : "none" }}
+          >
             <TocBrowser />
           </div>
         )}
