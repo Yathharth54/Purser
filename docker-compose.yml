@@ -1,0 +1,29 @@
+services:
+  purser:
+    build: .
+    # Host port is overridable: this machine already had something on 8000.
+    # PURSER_PORT=8010 docker compose up -d
+    ports:
+      - "${PURSER_PORT:-8000}:8000"
+    environment:
+      PURSER_MODEL: ${PURSER_MODEL:-openai:gpt-4o}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
+      PURSER_PDF_PATH: "/app/docs/Airbus SEP Manual Issue IX Rev 04 Effective 08th Oct 2025 2.pdf"
+    volumes:
+      # Her threads and the rendered page cache must survive a rebuild/restart.
+      - purser-var:/app/var
+    restart: unless-stopped
+    # `docker stop` exits 143, not 0 -- uvicorn re-raises the captured SIGTERM
+    # after shutting down gracefully, which is the Unix convention and not a
+    # fault. Judge health by this check, never by the stop exit code. A 137
+    # (SIGKILL after the grace period) would be the real red flag.
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  purser-var:
