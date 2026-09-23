@@ -17,7 +17,13 @@ from pathlib import Path
 
 import pytest
 
-from purser_core.blocks import BULLET_GLYPHS, parse_blocks
+from purser_core.blocks import (
+    BULLET_GLYPHS,
+    opens_with_a_row,
+    parse_blocks,
+    table_state_after,
+    wrap_width,
+)
 from purser_core.corpus import Corpus
 
 BULLET = ""  # the Wingdings bullet the manual actually uses, 4,326 times
@@ -333,3 +339,80 @@ def test_a_page_level_note_closes_the_table_above_it():
         for b in out
     )
     assert any(b.kind == "heading" and "ADVISORY ON INSTANCES" in b.text for b in out)
+
+
+# --- state across a page boundary --------------------------------------------
+
+ROWS = [
+    "  Escape slide equipped            Slide raft equipped",
+    "  To ABP 1: In case of             To ABP 1: In case of",
+]
+
+
+def test_parsing_can_start_inside_a_table_that_began_on_an_earlier_page():
+    out = parse_blocks(ROWS, [], start_in_table=True)
+    assert [b.kind for b in out] == ["table"]
+
+
+def test_by_default_a_page_never_starts_inside_a_table():
+    out = parse_blocks(ROWS, [])
+    assert "table" not in [b.kind for b in out]
+
+
+def test_a_carried_table_edge_decides_whether_a_gapless_line_is_a_row():
+    prose = "automatically, I will push it"
+    inside = parse_blocks([prose], [], start_in_table=True, table_indent=0)
+    outside = parse_blocks([prose], [], start_in_table=True, table_indent=10)
+    assert [b.kind for b in inside] == ["table"]
+    assert [b.kind for b in outside] == ["para"]
+
+
+def test_the_wrap_width_can_be_supplied_by_the_caller():
+    """A citation parses a slice of a page; it must rejoin wrapped lines using the
+    page's width, not a width recomputed from the few lines it was handed."""
+    lines = ["Cabin crew shall check the", "door before arming."]
+    joined = parse_blocks(lines, [], full=10)
+    unjoined = parse_blocks(lines, [], full=200)
+    assert [b.text for b in joined] == ["Cabin crew shall check the door before arming."]
+    assert len(unjoined) == 2
+
+
+def test_wrap_width_is_the_70th_percentile_line_width_less_four():
+    lines = ["x" * n for n in (10, 20, 30, 40, 50, 60, 70, 80, 90, 100)]
+    assert wrap_width(lines, []) == 80 - 4
+
+
+def test_table_state_after_reports_an_open_table_and_its_edge():
+    lines = ["Table 4.4F", *ROWS]
+    assert table_state_after(lines, []) == (True, 2)
+
+
+def test_table_state_after_reports_a_table_closed_by_a_heading():
+    lines = ["Table 4.4F", *ROWS, "2. CREW RESPONSIBILITIES"]
+    assert table_state_after(lines, []) == (False, None)
+
+
+def test_opens_with_a_row_skips_chrome_and_blank_lines():
+    lines = ["ifly.SEP   header", "", *ROWS]
+    assert opens_with_a_row(lines, [0])
+    assert not opens_with_a_row(["Cabin crew to ensure that at least one seat"], [])
+
+
+@needs_index
+@pytest.mark.parametrize(
+    ("prev", "page", "carried"),
+    [
+        (596, 597, True),  # Table 4.4F continues: land vs ditching, two columns
+        (181, 182, False),  # prose follows a page that ended in a table
+        (299, 300, False),
+    ],
+)
+def test_a_table_is_carried_onto_the_next_page_only_when_that_page_opens_with_a_row(
+    prev, page, carried
+):
+    corpus = Corpus("data")
+    p0, p1 = corpus.page(prev), corpus.page(page)
+    ended_in_table, _ = table_state_after(p0.lines, p0.chrome)
+    carry = ended_in_table and opens_with_a_row(p1.lines, p1.chrome)
+    out = parse_blocks(p1.lines, p1.chrome, start_in_table=carry)
+    assert ("table" in [b.kind for b in out]) is carried

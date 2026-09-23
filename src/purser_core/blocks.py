@@ -56,72 +56,104 @@ def _numbered(stripped: str) -> tuple[str, int] | None:
     return "step", 0
 
 
-def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
+def wrap_width(lines: list[str], chrome: list[int]) -> int:
+    """The width a line must reach to count as hard-wrapped, measured per page.
+
+    70th percentile, not the max: one wide table row would otherwise set the
+    bar so high that no prose line ever counts as wrapped.
+    No floor at 0: `prev_len` starts at 0 and `prev_len >= full` is
+    unconditionally true whenever `full <= 0`, so a floor here bought no
+    protection -- a narrow page over-joining unrelated lines is a real, open
+    risk, not one this function was actually closing.
+    """
     skip = set(chrome)
-    body = [(i, s) for i, s in enumerate(lines) if i not in skip]
+    widths = sorted(len(s.rstrip()) for i, s in enumerate(lines) if i not in skip and s.strip())
+    return (widths[int(len(widths) * 0.70)] - 4) if widths else 0
 
-    widths = sorted(len(s.rstrip()) for _, s in body if s.strip())
-    # 70th percentile, not the max: one wide table row would otherwise set the
-    # bar so high that no prose line ever counts as wrapped.
-    # No floor at 0: `prev_len` starts at 0 and `prev_len >= full` below is
-    # unconditionally true whenever `full <= 0`, so a floor here bought no
-    # protection -- a narrow page over-joining unrelated lines is a real,
-    # open risk, not one this line was actually closing.
-    full = (widths[int(len(widths) * 0.70)] - 4) if widths else 0
 
-    out: list[Block] = []
-    open_indent: list[int | None] = []  # parallel to out; None once a block is closed
-    prev_len = 0
-    in_table = False
-    table: list[str] = []
-    table_indent: int | None = None  # the table's left edge: the lowest row indent so far
-    pending_note = False  # the last block is a bare "Note:" still waiting for its body
+def _looks_like_row(raw: str) -> bool:
+    stripped = raw.strip()
+    return _ROW_GAP.search(raw.rstrip()) is not None and stripped[0] not in BULLET_GLYPHS
 
-    def close_table() -> None:
-        nonlocal in_table, table, table_indent
+
+def opens_with_a_row(lines: list[str], chrome: list[int]) -> bool:
+    """Whether a page's first content line is shaped like a table row.
+
+    The confirmation half of carrying a table across a page break: "the
+    previous page ended inside a table" is often wrong (a table that ran to
+    the foot of its page, then prose overleaf -- pdf 181 -> 182), so a page
+    only starts inside a table when its own first line agrees.
+    """
+    skip = set(chrome)
+    for i, raw in enumerate(lines):
+        if i not in skip and raw.strip():
+            return _looks_like_row(raw)
+    return False
+
+
+class _Parser:
+    """One pass over one page's lines. The state lives here, not in globals,
+    so a caller can start it mid-table and read where it ended -- but it is
+    still fed a single page: any state crossing a page boundary is carried by
+    the CALLER, through `start_in_table` / `table_indent`."""
+
+    def __init__(self, full: int, in_table: bool, table_indent: int | None) -> None:
+        self.full = full
+        self.out: list[Block] = []
+        self.open_indent: list[int | None] = []  # parallel to out; None once closed
+        self.prev_len = 0
+        self.in_table = in_table
+        self.table: list[str] = []
+        # The table's left edge: the lowest row indent so far.
+        self.table_indent = table_indent if in_table else None
+        self.pending_note = False  # the last block is a bare "Note:" awaiting its body
+
+    def close_table(self) -> None:
+        table = self.table
         if table:
             while table and not table[0].strip():
                 table.pop(0)
             while table and not table[-1].strip():
                 table.pop()
-            out.append(Block(kind="table", text="\n".join(table)))
-            open_indent.append(None)
-        in_table, table, table_indent = False, [], None
+            self.out.append(Block(kind="table", text="\n".join(table)))
+            self.open_indent.append(None)
+        self.in_table, self.table, self.table_indent = False, [], None
 
-    def add(kind: str, text: str, indent: int | None, level: int = 0) -> None:
-        out.append(Block(kind=kind, level=level, text=text))
-        open_indent.append(indent)
+    def add(self, kind: str, text: str, indent: int | None, level: int = 0) -> None:
+        self.out.append(Block(kind=kind, level=level, text=text))
+        self.open_indent.append(indent)
 
-    for _, raw in body:
+    def feed(self, raw: str) -> None:
+        out = self.out
         stripped = raw.strip()
         indent = len(raw) - len(raw.lstrip())
 
         if not stripped:
-            if in_table:
-                table.append("")
-            prev_len = 0  # a blank line always ends a wrapped run
-            continue
+            if self.in_table:
+                self.table.append("")
+            self.prev_len = 0  # a blank line always ends a wrapped run
+            return
 
-        awaiting_body, pending_note = pending_note, False
+        awaiting_body, self.pending_note = self.pending_note, False
 
         if _TABLE_CAP.match(stripped):
-            close_table()
-            add("caption", stripped, None)
-            in_table = True
-            prev_len = 0
-            continue
+            self.close_table()
+            self.add("caption", stripped, None)
+            self.in_table = True
+            self.prev_len = 0
+            return
 
         numbered = _numbered(stripped)
         if numbered and numbered[0] == "heading":
             # At any indent, and even inside a table: a heading is the one
             # thing a table can never contain, so it is also the table's
             # most reliable terminator.
-            close_table()
-            add("heading", stripped, None, numbered[1])
-            prev_len = len(raw.rstrip())
-            continue
+            self.close_table()
+            self.add("heading", stripped, None, numbered[1])
+            self.prev_len = len(raw.rstrip())
+            return
 
-        if in_table:
+        if self.in_table:
             # A table ends when a line's indent falls more than 2 columns below
             # the table's left edge -- UNLESS that line still looks like a
             # table row. The first row is not always representative
@@ -134,9 +166,8 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             # column gap too (pdf_page 57), and would otherwise be wrongly
             # absorbed into the table it precedes. An in-cell glyph (pdf_page
             # 130) sits mid-row, not at indent-drop, so it is unaffected.
-            looks_like_row = _ROW_GAP.search(raw.rstrip()) is not None and (
-                stripped[0] not in BULLET_GLYPHS
-            )
+            looks_like_row = _looks_like_row(raw)
+            table_indent = self.table_indent
             # A note label at the table's left edge with no column gap beside it
             # is a note ABOUT the table, not a cell in it (pdf_page 366). A note
             # set inside a column (pdf_pages 289, 814, 1144: well right of the
@@ -152,7 +183,7 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
                 table_indent is None or indent >= table_indent - 2 or looks_like_row
             ):
                 if table_indent is None:
-                    table_indent = indent
+                    self.table_indent = indent
                 elif looks_like_row:
                     # The body, not the first row, defines the table's left
                     # edge: the first row is often a centred header (pdf_page
@@ -162,10 +193,10 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
                     # a heading closes a table before this test is reached --
                     # once the edge reaches column 0-2 the indent test can no
                     # longer fail.
-                    table_indent = min(table_indent, indent)
-                table.append(raw.rstrip())
-                continue
-            close_table()
+                    self.table_indent = min(table_indent, indent)
+                self.table.append(raw.rstrip())
+                return
+            self.close_table()
             # fall through: reprocess this line through normal classification
 
         # A bare "Note:" takes this line as its body -- unless the line is a
@@ -177,38 +208,86 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             and not _NOTE.match(stripped)
         ):
             out[-1].text = f"{out[-1].text} {stripped}"
-            prev_len = len(raw.rstrip())
-            continue
+            self.prev_len = len(raw.rstrip())
+            return
 
         if stripped[0] in BULLET_GLYPHS:
-            add("bullet", stripped[1:].strip(), indent, max(0, indent // 5 - 1))
-            prev_len = len(raw.rstrip())
-            continue
+            self.add("bullet", stripped[1:].strip(), indent, max(0, indent // 5 - 1))
+            self.prev_len = len(raw.rstrip())
+            return
 
         if numbered:
-            add("step", stripped, indent, max(0, indent // 5 - 1))
-            prev_len = len(raw.rstrip())
-            continue
+            self.add("step", stripped, indent, max(0, indent // 5 - 1))
+            self.prev_len = len(raw.rstrip())
+            return
 
         note = _NOTE.match(stripped)
         if note:
-            add("note", stripped, indent)
-            pending_note = not stripped[note.end() :].strip()
-            prev_len = len(raw.rstrip())
-            continue
+            self.add("note", stripped, indent)
+            self.pending_note = not stripped[note.end() :].strip()
+            self.prev_len = len(raw.rstrip())
+            return
 
-        if out and open_indent[-1] is not None and prev_len >= full:
-            prev_ind = open_indent[-1]
+        if out and self.open_indent[-1] is not None and self.prev_len >= self.full:
+            prev_ind = self.open_indent[-1]
             if out[-1].kind in ("bullet", "step", "para", "note") and indent >= prev_ind:
                 out[-1].text = f"{out[-1].text} {stripped}".strip()
-                prev_len = len(raw.rstrip())
-                continue
+                self.prev_len = len(raw.rstrip())
+                return
 
         if stripped.isupper() and len(stripped) < 62:
-            add("subheading", stripped, indent)
+            self.add("subheading", stripped, indent)
         else:
-            add("para", stripped, indent)
-        prev_len = len(raw.rstrip())
+            self.add("para", stripped, indent)
+        self.prev_len = len(raw.rstrip())
 
-    close_table()
-    return out
+
+def _run(
+    lines: list[str],
+    chrome: list[int],
+    start_in_table: bool,
+    table_indent: int | None,
+    full: int | None,
+) -> _Parser:
+    skip = set(chrome)
+    parser = _Parser(
+        wrap_width(lines, chrome) if full is None else full, start_in_table, table_indent
+    )
+    for i, raw in enumerate(lines):
+        if i not in skip:
+            parser.feed(raw)
+    return parser
+
+
+def parse_blocks(
+    lines: list[str],
+    chrome: list[int],
+    *,
+    start_in_table: bool = False,
+    table_indent: int | None = None,
+    full: int | None = None,
+) -> list[Block]:
+    """Parse one page (or a slice of one) into blocks. Pure.
+
+    `chrome` indexes into `lines` as passed. The keywords carry state a caller
+    knows and this function cannot: that the page opens inside a table begun
+    earlier (`start_in_table`, with that table's left edge if known), and the
+    page-level wrap width when `lines` is only a slice (`full`). Their
+    defaults reproduce a standalone single-page parse.
+    """
+    parser = _run(lines, chrome, start_in_table, table_indent, full)
+    parser.close_table()
+    return parser.out
+
+
+def table_state_after(
+    lines: list[str],
+    chrome: list[int],
+    *,
+    start_in_table: bool = False,
+    table_indent: int | None = None,
+    full: int | None = None,
+) -> tuple[bool, int | None]:
+    """Whether a table is still open after the last of `lines`, and its left edge."""
+    parser = _run(lines, chrome, start_in_table, table_indent, full)
+    return parser.in_table, parser.table_indent
