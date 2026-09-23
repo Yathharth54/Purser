@@ -17,6 +17,12 @@
  * `level` is a heading's depth from its numbering ("1.6" is 2), or a
  * bullet's/step's nesting from its indent.
  *
+ * `depth` is how many open headings enclose the block -- the section
+ * structure, computed server-side (`purser_core.outline`). A heading at
+ * depth d owns the blocks after it with depth > d. It can be non-zero on a
+ * page's first block: the page opens inside a section begun earlier.
+ * Absent means 0.
+ *
  * Render every block's `text` through `displayManualText()`
  * (`web/src/lib/manualText.ts`) so PUA glyphs the source PDF's symbol
  * fonts left behind don't show up as tofu boxes.
@@ -33,6 +39,7 @@ export interface Block {
     | "table";
   level: number;
   text: string;
+  depth?: number;
 }
 
 /**
@@ -62,6 +69,9 @@ export interface Citation {
   text: string;
   blocks: Block[];
   label: string;
+  /** The innermost heading open where the quote begins -- for the card
+   * header only. It is NOT part of the quote; `text` never contains it. */
+  context?: string | null;
 }
 
 export interface TocNode {
@@ -94,6 +104,9 @@ export interface ReadingPage {
   effective: string; // ISO date
   blocks: Block[];
   empty: boolean;
+  /** Headings still open at the top of this page, outermost first: the
+   * page opens inside these sections, which began on an earlier page. */
+  continues?: string[];
 }
 
 /** Names emitted on the `tool` SSE event -- one retrieval call each. */

@@ -441,6 +441,18 @@ main {
   color: var(--accent);
 }
 
+/* The section a quote sits in: quiet, truncated, never mistaken for the
+   quote itself. */
+.paper-ctx {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--dim);
+}
+
 .paper-open {
   margin-left: auto;
   font-size: 12px;
@@ -487,6 +499,69 @@ main {
   margin-top: 0;
 }
 
+/* Heading size steps down with the manual's own numbering depth: "1." keeps
+   the mockup's 20px display face, "1.6" and "1.46.4" step down in the same
+   family so the hierarchy is legible at a glance. */
+.m-h2 {
+  font-size: 16px;
+  margin: 12px 0 6px;
+}
+
+.m-h3 {
+  font-size: 14px;
+  margin: 10px 0 5px;
+}
+
+/* A section is its heading plus everything it owns. Top-level sections are
+   separated by space; anything nested deeper hangs off a hairline rule, so
+   a subsection reads as one unit rather than a run of fragments. */
+.m-sec[data-depth="0"] + .m-sec[data-depth="0"] {
+  margin-top: 20px;
+}
+
+.m-sec:not([data-depth="0"]) > .m-sec-body {
+  border-left: 1px solid var(--rule);
+  padding-left: 12px;
+}
+
+/* A collapsible heading: the whole title is the hit target. */
+.m-h-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.m-h-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.m-h-toggle i {
+  flex: none;
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--dim);
+  border-bottom: 1.5px solid var(--dim);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.m-h-toggle[aria-expanded="false"] i {
+  transform: rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-h-toggle i {
+    transition: none;
+  }
+}
+
 .m-sh {
   font-size: 12px;
   font-weight: 700;
@@ -524,6 +599,24 @@ main {
   margin-top: 8px;
 }
 
+/* A numbered procedure step: the manual's own number hung in its column. */
+.m-step {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 7px;
+  padding-left: calc(var(--lv, 0) * 15px);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.m-step b {
+  flex: none;
+  min-width: 1.6em;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
 .m-note {
   font-size: 12.5px;
   line-height: 1.56;
@@ -533,6 +626,22 @@ main {
   background: var(--sunken);
   border-left: 2px solid var(--gold);
   color: var(--dim);
+}
+
+/* Caution and Warning escalate: a heavier rule in their own colour, and
+   body text at full strength instead of --dim. */
+.m-note-caution,
+.m-note-warning {
+  border-left-width: 3px;
+  color: var(--text);
+}
+
+.m-note-caution {
+  border-left-color: var(--caution);
+}
+
+.m-note-warning {
+  border-left-color: var(--warning);
 }
 
 .m-cap {
@@ -947,6 +1056,15 @@ main {
   flex: 1;
   height: 1px;
   background: var(--rule);
+}
+
+/* "1.6 3 POINT BRIEFING · continued": the section a page opens inside. */
+.m-cont {
+  margin: 0 0 9px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--dim);
 }
 
 .reader-blank {

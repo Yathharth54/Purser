@@ -69,7 +69,7 @@ describe("ManualBlocks", () => {
     const caption = extractTag(html, "m-cap");
     const table = extractTag(html, "m-tbl");
 
-    expect(heading?.tag).toBe("h4");
+    expect(heading?.tag).toBe("h3");
     expect(subheading?.tag).toBe("h5");
     expect(para?.tag).toBe("p");
     expect(bullet?.tag).toBe("div");
@@ -124,6 +124,114 @@ describe("ManualBlocks", () => {
     expect(html).not.toContain("");
     expect(html).toContain("▸"); // "▸" -- the known U+F0D8 substitution
     expect(html).toContain("•"); // "•" -- the fallback for an unmapped PUA glyph
+  });
+
+  it("renders a numbered step with its number hung apart from the verbatim text", () => {
+    const step: Block = { kind: "step", level: 0, text: "6. Latch the lavatory and mark it inoperative." };
+    const html = renderToStaticMarkup(<ManualBlocks blocks={[step]} />);
+    expect(html).toContain(
+      '<div class="m-step" style="--lv:0"><b>6.</b><span>Latch the lavatory and mark it inoperative.</span></div>',
+    );
+  });
+
+  it("steps heading size down by level", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks
+        blocks={[
+          { kind: "heading", level: 1, depth: 0, text: "1. GENERAL" },
+          { kind: "heading", level: 2, depth: 1, text: "1.1 SMOKE" },
+          { kind: "heading", level: 3, depth: 2, text: "1.1.1 OVEN" },
+        ]}
+      />,
+    );
+    expect(html).toContain('<h3 class="m-h">1. GENERAL</h3>');
+    expect(html).toContain('<h4 class="m-h m-h2">1.1 SMOKE</h4>');
+    expect(html).toContain('<h5 class="m-h m-h3">1.1.1 OVEN</h5>');
+  });
+
+  it("nests the blocks a heading owns inside that heading's section", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks
+        blocks={[
+          { kind: "heading", level: 1, depth: 0, text: "1. GENERAL" },
+          { kind: "para", level: 0, depth: 1, text: "intro" },
+          { kind: "heading", level: 2, depth: 1, text: "1.1 SMOKE" },
+          { kind: "para", level: 0, depth: 2, text: "inner" },
+          { kind: "heading", level: 1, depth: 0, text: "2. CREW" },
+        ]}
+      />,
+    );
+    expect(html).toBe(
+      '<div class="manual-blocks">' +
+        '<div class="m-sec" data-depth="0"><h3 class="m-h">1. GENERAL</h3><div class="m-sec-body">' +
+        '<p class="m-p">intro</p>' +
+        '<div class="m-sec" data-depth="1"><h4 class="m-h m-h2">1.1 SMOKE</h4><div class="m-sec-body">' +
+        '<p class="m-p">inner</p>' +
+        "</div></div>" +
+        "</div></div>" +
+        '<div class="m-sec" data-depth="0"><h3 class="m-h">2. CREW</h3><div class="m-sec-body"></div></div>' +
+        "</div>",
+    );
+  });
+
+  it("keeps a section's rule running when a page opens inside it", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks blocks={[{ kind: "para", level: 0, depth: 2, text: "continued" }]} />,
+    );
+    expect(html).toBe(
+      '<div class="manual-blocks">' +
+        '<div class="m-sec m-sec-cont" data-depth="0"><div class="m-sec-body">' +
+        '<div class="m-sec m-sec-cont" data-depth="1"><div class="m-sec-body">' +
+        '<p class="m-p">continued</p>' +
+        "</div></div></div></div></div>",
+    );
+  });
+
+  it("escalates Caution and Warning above an ordinary Note", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks
+        blocks={[
+          { kind: "note", level: 0, text: "Note: plain" },
+          { kind: "note", level: 0, text: "CAUTION: hot surface" },
+          { kind: "note", level: 0, text: "Warning - oxygen" },
+        ]}
+      />,
+    );
+    expect(html).toContain('<div class="m-note">Note: plain</div>');
+    expect(html).toContain('<div class="m-note m-note-caution">CAUTION: hot surface</div>');
+    expect(html).toContain('<div class="m-note m-note-warning">Warning - oxygen</div>');
+  });
+
+  it("draws static headings unless the caller can collapse them", () => {
+    const blocks: Block[] = [
+      { kind: "heading", level: 1, depth: 0, text: "1. GENERAL" },
+      { kind: "para", level: 0, depth: 1, text: "body" },
+    ];
+    expect(renderToStaticMarkup(<ManualBlocks blocks={blocks} />)).not.toContain("<button");
+
+    const open = renderToStaticMarkup(
+      <ManualBlocks blocks={blocks} idPrefix="551" collapsed={new Set()} onToggle={() => {}} />,
+    );
+    expect(open).toContain('<button type="button" class="m-h-toggle" aria-expanded="true"');
+
+    const shut = renderToStaticMarkup(
+      <ManualBlocks blocks={blocks} idPrefix="551" collapsed={new Set(["551-0"])} onToggle={() => {}} />,
+    );
+    expect(shut).toContain('aria-expanded="false"');
+  });
+
+  it("skips the blocks its caller has hidden", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks
+        blocks={[
+          { kind: "para", level: 0, text: "shown" },
+          { kind: "para", level: 0, text: "hidden" },
+        ]}
+        hidden={new Set([1])}
+      />,
+    );
+    expect(html).toContain("shown");
+    expect(html).not.toContain("hidden");
   });
 
   it("renders an empty blocks array without throwing", () => {

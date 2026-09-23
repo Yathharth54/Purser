@@ -41,6 +41,9 @@ html, body {
      task-8-report.md fix log for both recomputed contrast figures. */
   --text: #101828; --dim: #5c677b; --rule: #ded6c6; --hair: rgba(23,18,8,.07);
   --me: #e3d8c0; --paper: #fffdf9; --paper-ink: #161d2c; --accent: var(--gold-ink);
+  /* Manual note severity. Both clear 4.5:1 on --sunken and --paper
+     (caution 5.15 / 6.35, warning 5.81 / 7.16). */
+  --caution: #8a5100; --warning: #a8201a;
   --s1: 0 1px 2px rgba(60,48,26,.13), 0 2px 5px -1px rgba(60,48,26,.09);
   --s2: 0 1px 2px rgba(60,48,26,.16), 0 5px 12px -3px rgba(60,48,26,.16),
         0 14px 28px -10px rgba(60,48,26,.14);
@@ -60,6 +63,8 @@ html, body {
   --sunken: var(--navy-860); --text: var(--ivory); --dim: #8c99b6;
   --rule: var(--navy-700); --hair: rgba(255,255,255,.09); --me: #243560;
   --paper: #131d38; --paper-ink: var(--ivory); --accent: var(--gold);
+  /* On --sunken / --paper: caution 10.1 / 9.17, warning 8.3 / 7.53. */
+  --caution: #f2b560; --warning: #ff8f80;
   --s1: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px -1px rgba(0,0,0,.35);
   --s2: 0 1px 3px rgba(0,0,0,.45), 0 6px 14px -3px rgba(0,0,0,.45),
         0 16px 32px -12px rgba(0,0,0,.5);
