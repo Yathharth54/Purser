@@ -1,5 +1,15 @@
 # Handoff — make the manual read like a document
 
+> **Status (2026-09-23): all three issues shipped on `feat/manual-structure`.**
+> The fixes as written below were **unsafe** and were changed before shipping:
+> issue 1's running minimum causes table runaways unless a heading closes a table
+> first (pdf 299, 366), and issue 2's carry must be *confirmed* by the next page
+> opening with a row, or it spreads those runaways across pages (56 pages, prose
+> pdf 182 among them). Issue 3's thin structure was mostly the heading regex. See
+> "Manual structure" in `docs/superpowers/plans/2026-09-23-purser-v2-rulings.md`
+> for every decision and what it costs if wrong. The text below is kept as the
+> original diagnosis.
+
 Three separate problems, in the order I'd fix them. Each is independently
 shippable. The first has a validated fix with numbers; the second has an
 approach and a known complication; the third is the one the repository owner
@@ -68,12 +78,17 @@ by a previous bug and they constrain the rule from different directions.
 | **631** | a caption with an aircraft suffix (`Table 4.4Y (A-320)`) must open its table | 20 |
 | **613** | a centred header row must not truncate the body | 17 → **18 after issue 1** |
 | **57** | a PUA bullet glyph + padding must not read as a column gap | 7 |
+| **299** | a subsection heading (`1.6 3 POINT BRIEFING`) must close the table above it | 16 |
+| **366** | a gap-less `Note:` at the table edge, then `3. ADVISORY…`, must close it | 15 |
+| **596** | a body row with an empty right cell must not close the table | 11 |
+| **597** | a caption-less continuation page is a table in the reader (carried) | 0 per page, 52 in the reader |
+| **182** | prose after a page that ended in a table must stay prose | 0 |
 
 ---
 
 # Issue 1 — tables close at the first row with an empty second column
 
-**Status: diagnosed, fix validated, not applied.**
+**Status: shipped — but only together with the heading rule (see banner).**
 
 ## What happens
 
@@ -130,7 +145,7 @@ block. Make it fail against the current code first.
 
 # Issue 2 — caption-less table continuation pages
 
-**Status: approach chosen, not implemented. This is the bulk of the problem.**
+**Status: shipped with a confirmed carry, in the reader and in citations.**
 
 ## What happens
 
@@ -207,7 +222,7 @@ that produces the audit trail, so:
 
 # Issue 3 — the reader is a flat block stream, not a document
 
-**Status: the owner's actual complaint. Least specified. Needs design.**
+**Status: shipped — nested sections, steps, note severity, collapsible headings.**
 
 > *"i dont like how in manual the text is so random and dumped, it should be in
 > good section just like doc but cleanly in our app. sure cites should hve the

@@ -394,3 +394,55 @@ Ruling: C1's line numbers were off by 5 (834/880 vs actual 839/885) because B1's
   overflow-wrap insertions landed earlier in the same file. Selectors and content matched
   exactly, so applying was correct — this is the expected consequence of batching edits to
   one file, not a mismatch worth stopping for.
+
+---
+
+# Manual structure (feat/manual-structure) — decisions taken during execution
+
+Plan: headings, tables across pages, sections in the reader. Every rule below
+was measured against all 1,226 pages before it was adopted.
+
+Ruling: headings are numbered lines whose title is >80% capitals, at ANY indent;
+  lower-case numbered lines are a new `step` kind. The old test (trailing dot,
+  indent <= 2) missed ~630 subsection headings and promoted ~200 steps to
+  headings. Headings 444 -> 851.
+  Cost if wrong: a numbered line in capitals inside a table closes the table.
+  None of the guard pages do this; watch for it in new corpora.
+
+Ruling: the handoff's running-minimum table edge (issue 1) ships ONLY together
+  with the heading rule. Alone it produced runaways no guard page caught: once a
+  table's body reaches column 0-2 the indent test can never fail again (pdf 299
+  swallowed '1.6 3 POINT BRIEFING'; pdf 366 swallowed a Note and '3. ADVISORY').
+  A heading now closes a table first. Table lines 1,946 -> 2,397 per page.
+
+Ruling: a gap-less Note/Caution/Warning label at the table's left edge (indent <=
+  edge + 2) closes the table. Restricted to the edge after eyeballing all 18
+  affected pages: notes set inside a column (289, 814, 1144) sit well right of
+  the edge and the table continues after them.
+  Known miss: pdf 622's in-cell note sits in the LEFT column at the edge with an
+  empty right cell -- indistinguishable, so the rest of that table interleaves.
+
+Ruling: a table is carried onto the next page only when (a) the previous page in
+  the section ended inside one AND (b) the new page's first content line is itself
+  a row. Blind carry turned 56 pages -- prose pdf 182 among them -- into monospace.
+  Confirmed carry: pdf 597 0 -> 52 table lines; 14 pages become all-table in the
+  reader, each eyeballed as a genuine continuation.
+
+Ruling: section structure is a flat `Block.depth` computed in purser_core, not a
+  nested model. It carries across page breaks (with `ReadingPage.continues`) and
+  serialises unchanged. Citations parse their slice with the carried table state,
+  its left edge and the PAGE's wrap width, so a card draws the same structure the
+  reader does; depth is rebased so the quote's shallowest block sits at 0, and the
+  enclosing section is a display-only `Citation.context`. `Citation.text` is
+  untouched.
+
+Ruling: the reader flows sections across pages (page markers stay), steps heading
+  size by level, hangs nested sections off a hairline rule, escalates Caution and
+  Warning with their own AA tokens, and makes every heading collapsible --
+  including across page breaks. Owner's choices, 2026-09-23. No outline this round.
+
+Open (pre-existing, not introduced here): a wrapped line joins the block above
+  only when that line reached the page's 70th-percentile width. Several notes miss
+  by 1-7 characters (pdf 811 WARNING: 76 vs 77; 242, 414, 1033), so their second
+  line renders as a separate paragraph outside the note. Fixing it changes joining
+  corpus-wide and needs its own measurement pass.
