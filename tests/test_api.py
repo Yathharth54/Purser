@@ -118,10 +118,27 @@ def test_toc_lists_sections(client):
     assert len([n for n in body if n["section"]]) == 37
 
 
-def test_section_returns_verbatim_pages(client):
+def test_section_returns_readable_pages(client):
+    r = client.get("/api/section/4.2")
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 8
+    assert all("blocks" in p and "numbered_lines" not in p for p in body)
+    kinds = {b["kind"] for p in body for b in p["blocks"]}
+    assert "heading" in kinds and "bullet" in kinds
+
+
+def test_section_reader_slices_by_page_bounds(client):
     body = client.get("/api/section/4.4", params={"page_from": 1, "page_to": 2}).json()
     assert len(body) == 2
     assert body[0]["page_in_section"] == 1
+
+
+def test_section_reader_returns_every_page_of_a_long_section(client):
+    """Section 4.4 is 80 pages. The old UI capped the reader at 4 pages and
+    40 lines -- this pins that the endpoint itself carries no such cap."""
+    body = client.get("/api/section/4.4").json()
+    assert len(body) == 80
 
 
 def test_unknown_section_404s(client):

@@ -92,6 +92,20 @@ class PageText(BaseModel):
     numbered_lines: list[str]  # "12|CABIN CREW SHALL..." — index is the citable one
 
 
+class ReadingPage(BaseModel):
+    """One page of the manual, shaped for a person rather than the model."""
+
+    pdf_page: int
+    page_in_section: int
+    section_total: int
+    section: str | None
+    section_title: str | None
+    revision: str | None
+    effective: date
+    blocks: list[Block]
+    empty: bool  # True for the 8 pages that carry no text at all
+
+
 class SectionHit(BaseModel):
     """One section that matched, with the pages inside it that did.
 

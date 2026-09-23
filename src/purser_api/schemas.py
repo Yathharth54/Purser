@@ -4,7 +4,7 @@ from datetime import date
 
 from pydantic import BaseModel, Field, computed_field
 
-from purser_core.models import PartName
+from purser_core.models import Block, PartName
 
 
 class Citation(BaseModel):
@@ -19,6 +19,7 @@ class Citation(BaseModel):
     revision: str | None
     effective: date
     text: str
+    blocks: list[Block] = []
 
     @computed_field  # type: ignore[prop-decorator]
     @property
