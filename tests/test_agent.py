@@ -115,3 +115,18 @@ async def test_aviation_question_not_covered_by_manual_is_declined(agent_and_dep
     # No weight figure (e.g. "93,500 kg", "97000 kg", "205,000 lb") leaked
     # into the body: no run of 4+ digits, the shape any real MTOW figure has.
     assert not re.search(r"\d{4,}", result.output.body)
+
+
+def test_the_agent_reads_sections_and_neighbours_in_bounded_windows(monkeypatch):
+    """The cap only helps if the agent's own tools apply it."""
+    from types import SimpleNamespace
+
+    from purser_agent.lookup import MAX_READ_PAGES
+
+    monkeypatch.setenv("PURSER_MODEL", "openrouter:deepseek/deepseek-v4.1-flash")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "not-used")
+    tools = PurserTools("data")
+    fns = build_agent(tools)._function_toolset.tools
+    ctx = SimpleNamespace(deps=PurserDeps(tools=tools))
+    assert len(fns["read_section"].function(ctx, section="4.4")) == MAX_READ_PAGES
+    assert len(fns["read_page"].function(ctx, pdf_page=600, before=20, after=20)) <= MAX_READ_PAGES

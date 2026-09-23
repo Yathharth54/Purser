@@ -257,3 +257,25 @@ def test_a_page_of_pure_furniture_yields_no_lines(tools):
     # pdf_page 314 is one of exactly 8 pages that carry no content at all.
     [pt] = tools.read_page(314)
     assert pt.numbered_lines == []
+
+
+# --- the agent reads in bounded windows --------------------------------------
+
+
+def test_read_section_can_be_capped_to_a_window_of_pages(tools):
+    """An uncapped read of section 4.4 hands the model all 80 pages, and every
+    later turn re-sends them: one ditching question measured 454k input tokens."""
+    assert [p.page_in_section for p in tools.read_section("4.4", max_pages=6)] == [1, 2, 3, 4, 5, 6]
+    window = tools.read_section("4.4", page_from=30, page_to=80, max_pages=6)
+    assert [p.page_in_section for p in window] == [30, 31, 32, 33, 34, 35]
+
+
+def test_read_page_neighbours_can_be_capped(tools):
+    pages = tools.read_page(600, before=10, after=10, max_pages=7)
+    assert [p.pdf_page for p in pages] == [597, 598, 599, 600, 601, 602, 603]
+
+
+def test_a_page_tells_the_model_how_long_its_section_is(tools):
+    """Without the total, a capped read looks like the whole section."""
+    [pt] = tools.read_page(600)
+    assert (pt.page_in_section, pt.section_total) == (34, 80)
