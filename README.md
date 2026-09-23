@@ -74,7 +74,7 @@ that, which is what keeps a future MCP adapter cheap.
 
 ```sh
 uv sync --extra dev
-cp .env.example .env          # add OPENAI_API_KEY
+cp .env.example .env          # add the key for your provider
 purser ingest "docs/<manual>.pdf" --out data/
 pytest
 ```
@@ -95,7 +95,7 @@ This is how it is meant to be run. One container serves the API and the PWA toge
    baked into the image.
 
 ```sh
-cp .env.example .env         # add OPENAI_API_KEY
+cp .env.example .env         # add the key for your provider
 docker compose up -d --build
 ```
 
@@ -110,8 +110,9 @@ spaces, and an unquoted copy of it breaks any shell that sources the file.
 
 | Variable | Purpose |
 | --- | --- |
-| `OPENAI_API_KEY` | required |
-| `PURSER_MODEL` | defaults to `openai:gpt-4o` |
+| `OPENAI_API_KEY` | required when `PURSER_MODEL` names `openai:` |
+| `OPENROUTER_API_KEY` | required when `PURSER_MODEL` names `openrouter:` |
+| `PURSER_MODEL` | defaults to `openai:gpt-4o`; see *Choosing a model* below |
 | `PURSER_PORT` | host port, defaults to 8000 |
 | `PURSER_PDF_PATH` | set inside the container by compose; only needed locally for dev |
 
@@ -142,6 +143,34 @@ prints for itself, so a reissue with the same footer grammar needs no code chang
 latter is a silent no-op — `cli.py` has no `if __name__ == "__main__"` guard, so the
 module runs its imports, prints nothing, and exits 0 without ingesting anything. It looks
 like it worked; it did not.
+
+
+## Choosing a model
+
+`PURSER_MODEL` is the only place a model is named, and it is handed to
+pydantic-ai verbatim — it infers the provider from the prefix. Nothing else in
+the codebase knows which provider is in use.
+
+```bash
+PURSER_MODEL=openai:gpt-4o                           # default
+PURSER_MODEL=openrouter:anthropic/claude-sonnet-4.5  # via OpenRouter
+PURSER_MODEL=openrouter:openai/gpt-4o                # same model, OpenRouter billing
+```
+
+OpenRouter needs no client of its own: it is the same OpenAI-compatible surface
+behind one account, and `pydantic-ai` ships the provider. Set
+`OPENROUTER_API_KEY` instead of `OPENAI_API_KEY` and restart — the other may
+stay empty.
+
+If the key for the configured provider is missing, the app raises at agent
+construction naming the variable it wants, rather than surfacing a 401 from
+three layers down while she is waiting on an answer.
+
+**One caveat.** The agent uses tool calling and a structured output type
+(`Answer`, which carries `CiteRef` coordinates). Not every model OpenRouter
+fronts supports function calling well enough for that. If citations stop
+resolving after a model swap, suspect the model before the code — and check
+`tests/eval/` still reports `recall@8` at its baseline.
 
 ## Layout
 

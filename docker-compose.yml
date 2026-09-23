@@ -7,7 +7,11 @@ services:
       - "${PURSER_PORT:-8000}:8000"
     environment:
       PURSER_MODEL: ${PURSER_MODEL:-openai:gpt-4o}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
+      # Whichever provider PURSER_MODEL names needs its key; the other can be
+      # absent. The app fails at agent construction naming the missing one,
+      # which is a better error than compose refusing to start.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       PURSER_PDF_PATH: "/app/docs/Airbus SEP Manual Issue IX Rev 04 Effective 08th Oct 2025 2.pdf"
     volumes:
       # Her threads and the rendered page cache must survive a rebuild/restart.

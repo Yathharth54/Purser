@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pydantic_ai import Agent, RunContext
 
 from purser_agent.prompts import SYSTEM_PROMPT
-from purser_agent.provider import resolve_model
+from purser_agent.provider import require_credentials, resolve_model
 from purser_agent.schemas import Answer
 from purser_core.models import GlossaryEntry, PageText, PartName, SectionHit, TocNode
 from purser_core.tools import PurserTools
@@ -19,6 +19,10 @@ class PurserDeps:
 
 
 def build_agent(tools: PurserTools) -> Agent[PurserDeps, Answer]:
+    # Fail here, naming the missing variable, rather than as an opaque 401
+    # mid-stream while she is waiting on an answer.
+    require_credentials()
+
     agent = Agent(
         resolve_model(),
         deps_type=PurserDeps,

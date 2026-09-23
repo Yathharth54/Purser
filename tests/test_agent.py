@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
@@ -8,11 +7,12 @@ import pytest
 
 from purser_agent.lookup import PurserDeps, build_agent
 from purser_agent.prompts import SYSTEM_PROMPT
+from purser_agent.provider import credentials_present
 from purser_core.tools import PurserTools
 
 needs_live = pytest.mark.skipif(
-    not os.environ.get("OPENAI_API_KEY") or not Path("data/manual.sqlite").is_file(),
-    reason="needs OPENAI_API_KEY and a built index",
+    not credentials_present() or not Path("data/manual.sqlite").is_file(),
+    reason="needs a key for the configured PURSER_MODEL and a built index",
 )
 
 
