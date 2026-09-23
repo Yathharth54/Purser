@@ -88,8 +88,17 @@ def resolve(corpus: Corpus, ref: CiteRef) -> Citation | None:
         effective=page.effective,
         text="\n".join(page.lines[lo:hi]),
         blocks=blocks,
-        context=open_headings[-1][1] if open_headings else None,
+        context=_context(open_headings, blocks),
     )
+
+
+def _context(open_headings: list[tuple[int, str]], blocks: list) -> str | None:
+    """The section the quote sits in. When the quote opens with a heading, that
+    heading closes every open section of its rank or deeper -- naming one of
+    those would label the card with a sibling the quote is not part of."""
+    if blocks and blocks[0].kind == "heading":
+        open_headings = [h for h in open_headings if h[0] < blocks[0].level]
+    return open_headings[-1][1] if open_headings else None
 
 
 def resolve_all(corpus: Corpus, refs: list[CiteRef]) -> list[Citation]:

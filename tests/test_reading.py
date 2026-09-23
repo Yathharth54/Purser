@@ -125,3 +125,9 @@ def test_prose_after_a_page_that_ended_in_a_table_stays_prose(corpus):
 
 def test_reading_a_section_twice_gives_the_same_pages(corpus):
     assert reading_pages(corpus, "3.5") == reading_pages(corpus, "3.5")
+
+
+def test_no_reader_page_carries_an_empty_table(corpus):
+    p759 = _page(reading_pages(corpus, "6.1"), 759)
+    assert p759.blocks[0].kind == "heading"
+    assert all(b.text for b in p759.blocks if b.kind == "table")

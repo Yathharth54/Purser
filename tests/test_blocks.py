@@ -416,3 +416,15 @@ def test_a_table_is_carried_onto_the_next_page_only_when_that_page_opens_with_a_
     carry = ended_in_table and opens_with_a_row(p1.lines, p1.chrome)
     out = parse_blocks(p1.lines, p1.chrome, start_in_table=carry)
     assert ("table" in [b.kind for b in out]) is carried
+
+
+def test_a_carried_table_closed_before_any_row_leaves_no_empty_table():
+    """A page that was carried into a table but opens with blank lines and then a
+    heading must not emit an empty table block (pdf 759, 813, 819, 822, 826)."""
+    out = parse_blocks(["", "", "2.         EXTERIOR DESCRIPTION"], [], start_in_table=True)
+    assert [b.kind for b in out] == ["heading"]
+
+
+def test_a_page_opening_with_a_gapped_heading_does_not_open_with_a_row():
+    assert not opens_with_a_row(["", "2.         EXTERIOR DESCRIPTION"], [])
+    assert not opens_with_a_row(["Table 4.4F"], [])

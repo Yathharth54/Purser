@@ -86,7 +86,13 @@ def opens_with_a_row(lines: list[str], chrome: list[int]) -> bool:
     """
     skip = set(chrome)
     for i, raw in enumerate(lines):
-        if i not in skip and raw.strip():
+        if i not in skip and (stripped := raw.strip()):
+            # A heading whose number is padded ("2.         EXTERIOR
+            # DESCRIPTION", pdf 759) has a column-sized gap too, but a
+            # heading or a caption can never continue a table.
+            numbered = _numbered(stripped)
+            if (numbered and numbered[0] == "heading") or _TABLE_CAP.match(stripped):
+                return False
             return _looks_like_row(raw)
     return False
 
@@ -110,11 +116,13 @@ class _Parser:
 
     def close_table(self) -> None:
         table = self.table
+        while table and not table[0].strip():
+            table.pop(0)
+        while table and not table[-1].strip():
+            table.pop()
+        # Trim first, then test: a carried table closed before any row
+        # arrived holds only blank lines, and must leave no empty block.
         if table:
-            while table and not table[0].strip():
-                table.pop(0)
-            while table and not table[-1].strip():
-                table.pop()
             self.out.append(Block(kind="table", text="\n".join(table)))
             self.open_indent.append(None)
         self.in_table, self.table, self.table_indent = False, [], None

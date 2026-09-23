@@ -257,3 +257,18 @@ def test_a_citation_nests_headings_inside_its_own_range(corpus):
     [head] = [b for b in cite.blocks if b.kind == "heading" and "3 POINT BRIEFING" in b.text]
     after = cite.blocks[cite.blocks.index(head) + 1]
     assert after.depth == head.depth + 1
+
+
+@pytest.mark.parametrize(
+    ("pdf_page", "line", "context"),
+    [
+        (35, 24, None),  # "2. AIRCRAFT RULES OF 1937" closes "1. INTRODUCTION"
+        (36, 23, "2. AIRCRAFT RULES OF 1937"),  # "2.3 ..." closes its sibling "2.2 ..."
+    ],
+)
+def test_a_quote_starting_with_a_heading_is_not_labelled_with_the_section_it_closes(
+    corpus, pdf_page, line, context
+):
+    cite = resolve(corpus, CiteRef(pdf_page=pdf_page, line_from=line, line_to=line + 4))
+    assert cite.blocks[0].kind == "heading"
+    assert cite.context == context
