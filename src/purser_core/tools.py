@@ -72,7 +72,9 @@ def _to_page_text(page: Page) -> PageText:
         section=page.section,
         section_title=page.section_title,
         page_in_section=page.page_in_section,
-        numbered_lines=[f"{i}| {ln}" for i, ln in enumerate(page.lines)],
+        # Furniture is dropped; the index is NOT renumbered. The model cites the
+        # number it is shown, and that number must still address Page.lines.
+        numbered_lines=[f"{i}|{text}" for i, text in page.content_lines()],
     )
 
 
