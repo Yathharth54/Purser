@@ -105,6 +105,9 @@ class ReadingPage(BaseModel):
     effective: date
     blocks: list[Block]
     empty: bool  # True for the 8 pages that carry no text at all
+    # Headings still open at the top of this page, outermost first: the page
+    # opens inside these sections, which began on an earlier page.
+    continues: list[str] = []
 
 
 class SectionHit(BaseModel):

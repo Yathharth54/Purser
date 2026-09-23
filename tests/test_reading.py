@@ -80,3 +80,48 @@ def test_an_empty_page_does_not_disturb_the_numbering_around_it(corpus):
     assert after.pdf_page == 485
     assert not after.empty
     assert after.blocks
+
+
+# --- sections and tables flow across page breaks -------------------------------
+
+
+def _page(pages, pdf_page):
+    [p] = [p for p in pages if p.pdf_page == pdf_page]
+    return p
+
+
+def test_a_heading_keeps_owning_its_content_across_a_page_break(corpus):
+    """pdf 299 opens '1.6 3 POINT BRIEFING' at its foot; the top of pdf 300 is still
+    that briefing, so it is nested under it and the page says so."""
+    p300 = _page(reading_pages(corpus, "3.5"), 300)
+    assert p300.continues[-1] == "1.6         3 POINT BRIEFING"
+    assert p300.blocks[0].kind != "heading"
+    assert p300.blocks[0].depth == len(p300.continues)
+
+
+def test_every_page_opens_at_the_depth_of_the_headings_it_continues(corpus):
+    for section in ("4.2", "3.5", "4.4"):
+        for p in reading_pages(corpus, section):
+            if p.blocks and p.blocks[0].kind != "heading":
+                assert p.blocks[0].depth == len(p.continues), (section, p.pdf_page)
+
+
+def test_the_first_page_of_a_section_continues_nothing(corpus):
+    assert reading_pages(corpus, "4.2")[0].continues == []
+
+
+def test_a_table_continuing_from_the_previous_page_is_a_table_in_the_reader(corpus):
+    """pdf 597 continues Table 4.4F (land vs ditching briefing) with no caption of
+    its own; its two columns used to interleave top to bottom."""
+    p597 = _page(reading_pages(corpus, "4.4"), 597)
+    [first, *_] = [b for b in p597.blocks if b.kind == "table"]
+    assert "To ABP1: You will inflate your life jacket" in first.text
+
+
+def test_prose_after_a_page_that_ended_in_a_table_stays_prose(corpus):
+    p182 = _page(reading_pages(corpus, "2.2"), 182)
+    assert "table" not in [b.kind for b in p182.blocks]
+
+
+def test_reading_a_section_twice_gives_the_same_pages(corpus):
+    assert reading_pages(corpus, "3.5") == reading_pages(corpus, "3.5")
