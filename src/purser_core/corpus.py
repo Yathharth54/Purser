@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from functools import cached_property
 from pathlib import Path
 
@@ -27,12 +28,25 @@ class Corpus:
 
     def __init__(self, data_dir: str | Path = "data") -> None:
         self.dir = Path(data_dir)
-        self._con = sqlite3.connect(self.dir / "manual.sqlite", check_same_thread=False)
-        self._con.row_factory = sqlite3.Row
+        self._local = threading.local()
 
     @property
     def connection(self) -> sqlite3.Connection:
-        return self._con
+        """This thread's connection to the index.
+
+        One per thread, never shared: the agent runs tool calls in parallel
+        threads when a model emits several at once, and a single sqlite3
+        connection used from two threads at the same time returns corrupted
+        rows (None columns, IndexError, InterfaceError) rather than failing
+        cleanly. The index is read-only at runtime, so separate connections
+        cannot disagree.
+        """
+        con = getattr(self._local, "con", None)
+        if con is None:
+            con = sqlite3.connect(self.dir / "manual.sqlite")
+            con.row_factory = sqlite3.Row
+            self._local.con = con
+        return con
 
     @cached_property
     def vectors(self) -> np.ndarray:
@@ -47,7 +61,7 @@ class Corpus:
         return [GlossaryEntry(**g) for g in json.loads((self.dir / "glossary.json").read_text())]
 
     def page(self, pdf_page: int) -> Page:
-        row = self._con.execute(
+        row = self.connection.execute(
             f"SELECT {_COLUMNS} FROM pages WHERE pdf_page = ?", (pdf_page,)
         ).fetchone()
         if row is None:
@@ -55,7 +69,7 @@ class Corpus:
         return _row_to_page(row)
 
     def pages_in_section(self, section: str) -> list[Page]:
-        rows = self._con.execute(
+        rows = self.connection.execute(
             f"SELECT {_COLUMNS} FROM pages WHERE section = ? ORDER BY page_in_section",
             (section,),
         ).fetchall()
