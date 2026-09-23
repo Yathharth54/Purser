@@ -349,6 +349,110 @@ main {
   color: var(--dim);
 }
 
+/* ---------- Manual blocks: the formatted manual document ----------
+   Rendered by ManualBlocks.tsx from typed `Block`s (Task 6/7's parser),
+   used identically inside the citation "paper" card (Task 11) and the
+   section reader (Task 12) -- see the mockup's "Manual" demo section,
+   which is authoritative over the plan prose wherever the two disagree.
+   No outer color is set here beyond what each kind specifies explicitly;
+   .m-p/.m-li/.m-cap inherit their caller's ambient text color (--text on
+   the app background, --paper-ink inside a .paper card) exactly as the
+   approved mockup does. */
+
+.manual-blocks {
+  font-family: var(--ff-ui);
+}
+
+.m-h {
+  font-family: var(--ff-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 14px 0 7px;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.m-h:first-child {
+  margin-top: 0;
+}
+
+.m-sh {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 12px 0 5px;
+  color: var(--text);
+}
+
+.m-p {
+  font-size: 13.5px;
+  line-height: 1.66;
+  margin: 0 0 9px;
+  max-width: 64ch; /* readable measure -- this is the fix for the wall of
+                       text the manual used to render as. */
+}
+
+.m-li {
+  display: flex;
+  gap: 9px;
+  margin: 0 0 7px;
+  /* --lv is the bullet's nesting depth, set inline by ManualBlocks.tsx --
+     the parser has already stripped the source glyph, so this component
+     draws its own marker and owns the indent. */
+  padding-left: calc(var(--lv, 0) * 15px);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.m-li i {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  margin-top: 8px;
+}
+
+.m-note {
+  font-size: 12.5px;
+  line-height: 1.56;
+  margin: 9px 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--sunken);
+  border-left: 2px solid var(--gold);
+  color: var(--dim);
+}
+
+.m-cap {
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  margin: 12px 0 5px;
+  letter-spacing: 0.04em;
+}
+
+.m-tbl {
+  background: var(--sunken);
+  border-radius: 9px;
+  padding: 10px 11px;
+  /* Never reflow a table: its column gaps pair a condition to the action
+     it requires. On a narrow phone this scrolls horizontally instead of
+     wrapping or silently clipping. */
+  overflow-x: auto;
+  margin: 0 0 11px;
+  box-shadow: var(--inset);
+}
+
+.m-tbl pre {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 9.5px;
+  line-height: 1.52;
+  color: var(--text);
+  white-space: pre;
+}
+
 /* ---------- Composer: pinned in the thumb zone ---------- */
 
 .composer {
