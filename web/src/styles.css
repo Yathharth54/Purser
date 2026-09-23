@@ -1,0 +1,453 @@
+/*
+ * Layout and component styles, built on the color/type tokens from
+ * src/styles/tokens.css and the layout in
+ * .superpowers/sdd/2026-09-22-purser/design-plan.md.
+ *
+ * Rules this file exists to enforce:
+ *  - --halo appears on citation rules ONLY. Never a button, link, heading,
+ *    or focus ring.
+ *  - No cards: no border-radius chrome, no box-shadows, no rounded
+ *    containers. Buttons and inputs are sharp-edged.
+ *  - Light mode ([data-theme="light"], the default) is the primary design.
+ *    Cabin mode ([data-theme="cabin"]) is the dim-light reading mode -- it
+ *    inverts to an --ink base with --paper text, not a generic dark theme.
+ *  - The only orchestrated motion is the page drawer sliding up.
+ */
+
+:root {
+  --bg: var(--paper);
+  --fg: var(--ink);
+  --surface: #e6ebee; /* raised surface in light mode: composer, drawer */
+  --rule: rgba(14, 24, 38, 0.14); /* quiet structural line, not a "hairline rule" grid */
+}
+
+:root[data-theme="cabin"] {
+  --bg: var(--ink);
+  --fg: var(--paper);
+  --surface: var(--deck);
+  --rule: rgba(242, 245, 247, 0.16);
+}
+
+* {
+  min-width: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  overscroll-behavior: none;
+}
+
+button,
+input {
+  font-family: inherit;
+  color: inherit;
+  border-radius: 0; /* no rounded chrome anywhere in this app */
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+/* ---------- App shell ---------- */
+
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.app-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.app-head h1 {
+  font-size: var(--text-body-lg);
+  font-weight: 700;
+  margin: 0;
+  flex: none;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.tabs button {
+  padding: 6px 2px;
+  margin-right: 16px;
+  font-size: var(--text-body-sm);
+  color: var(--dim);
+  border-bottom: 2px solid transparent;
+}
+
+.tabs button.on {
+  color: var(--fg);
+  font-weight: 700;
+  border-bottom-color: var(--fg);
+}
+
+.theme-toggle {
+  flex: none;
+  font-size: var(--text-meta);
+  color: var(--dim);
+  border: 1px solid var(--rule);
+  padding: 6px 10px;
+  min-height: 32px;
+}
+
+main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Chat ---------- */
+
+.chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.turns {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.empty {
+  color: var(--dim);
+  font-size: var(--text-body-lg);
+  padding-top: 8px;
+}
+
+.starters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.starter {
+  font-size: var(--text-body-sm);
+  color: var(--fg);
+  border: 1px solid var(--rule);
+  padding: 10px 14px;
+  min-height: 44px;
+  text-align: left;
+}
+
+.turn {
+  max-width: 100%;
+}
+
+.turn-user {
+  align-self: flex-end;
+  max-width: 85%;
+  text-align: right;
+}
+
+.turn-user .turn-body {
+  color: var(--dim);
+  font-size: var(--text-body-sm);
+}
+
+.turn-assistant {
+  align-self: stretch;
+  text-align: left;
+}
+
+.turn-body {
+  margin: 0;
+  font-size: var(--text-body-lg);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.turn-pending {
+  color: var(--dim);
+}
+
+.tool-status {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: var(--text-meta);
+}
+
+.uncited {
+  margin: 10px 0 0;
+  color: var(--dim);
+  font-size: var(--text-meta);
+}
+
+.turn-error {
+  margin: 10px 0 0;
+  font-size: var(--text-body-sm);
+}
+
+/* ---------- Citations: the one bold element ---------- */
+
+.citations {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.citation {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border-left: 3px solid var(--halo);
+  padding: 4px 0 4px 14px;
+}
+
+.citation-label {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--fg);
+}
+
+.citation-text {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  color: var(--fg);
+}
+
+.citation-revision {
+  margin: 10px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--dim);
+}
+
+/* ---------- Composer: pinned in the thumb zone ---------- */
+
+.composer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.composer input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  padding: 12px 14px;
+  font-size: 16px; /* >=16px avoids iOS Safari zoom-on-focus */
+  min-height: 44px;
+}
+
+.composer input:disabled {
+  opacity: 0.6;
+}
+
+.send {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--fg);
+  color: var(--fg);
+}
+
+.send:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ---------- Page drawer: the one orchestrated motion ---------- */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+}
+
+.drawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--rule);
+  padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateY(100%);
+  transition: transform 0.32s ease;
+}
+
+.drawer--open {
+  transform: translateY(0);
+}
+
+.drawer:not(.drawer--open) {
+  pointer-events: none;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawer-label {
+  margin: 0 0 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+}
+
+.drawer-sub {
+  margin: 0;
+  color: var(--dim);
+  font-size: var(--text-meta);
+}
+
+.drawer-revision {
+  margin-top: 2px;
+}
+
+.drawer-close {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  line-height: 1;
+  border: 1px solid var(--rule);
+}
+
+.drawer-text {
+  margin: 16px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  border-left: 3px solid var(--halo);
+  padding-left: 14px;
+}
+
+.drawer-image {
+  margin-top: 16px;
+}
+
+.drawer-note {
+  color: var(--dim);
+  font-size: var(--text-body-sm);
+}
+
+.drawer-page {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- Manual (TOC) browser ---------- */
+
+.toc {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 24px;
+}
+
+.toc-row {
+  padding: 14px 0;
+}
+
+.toc-open {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  min-height: 44px;
+}
+
+.toc-id {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--dim);
+  min-width: 3.5em;
+}
+
+.toc-title {
+  flex: 1;
+  font-size: var(--text-body-sm);
+}
+
+.toc-pages {
+  flex: none;
+  font-size: var(--text-meta);
+  color: var(--dim);
+}
+
+.toc-preview {
+  margin: 12px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  border-left: 3px solid var(--halo);
+  padding-left: 14px;
+}
+
+.toc-error {
+  padding: 16px;
+}
