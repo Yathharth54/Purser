@@ -8,21 +8,38 @@
  * One structural unit of manual text, recovered from the text layer (Task
  * 6/7's parser).
  *
- * `text` is verbatim for every kind EXCEPT `para`, `bullet` and `note`,
+ * `text` is verbatim for every kind EXCEPT `para`, `bullet`, `step` and `note`,
  * where lines the PDF hard-wrapped are rejoined with a single space --
  * that restores the sentence the author wrote. `table` keeps its own
  * newlines and leading spaces, because its columns ARE the information --
  * never reflow it. `bullet`'s glyph has already been stripped server-side;
- * `level` carries its nesting depth (headings don't nest by level).
+ * `step` is a numbered procedure step and keeps its number in `text`.
+ * `level` is a heading's depth from its numbering ("1.6" is 2), or a
+ * bullet's/step's nesting from its indent.
+ *
+ * `depth` is how many open headings enclose the block -- the section
+ * structure, computed server-side (`purser_core.outline`). A heading at
+ * depth d owns the blocks after it with depth > d. It can be non-zero on a
+ * page's first block: the page opens inside a section begun earlier.
+ * Absent means 0.
  *
  * Render every block's `text` through `displayManualText()`
  * (`web/src/lib/manualText.ts`) so PUA glyphs the source PDF's symbol
  * fonts left behind don't show up as tofu boxes.
  */
 export interface Block {
-  kind: "heading" | "subheading" | "para" | "bullet" | "note" | "caption" | "table";
+  kind:
+    | "heading"
+    | "subheading"
+    | "para"
+    | "bullet"
+    | "step"
+    | "note"
+    | "caption"
+    | "table";
   level: number;
   text: string;
+  depth?: number;
 }
 
 /**
@@ -52,6 +69,9 @@ export interface Citation {
   text: string;
   blocks: Block[];
   label: string;
+  /** The innermost heading open where the quote begins -- for the card
+   * header only. It is NOT part of the quote; `text` never contains it. */
+  context?: string | null;
 }
 
 export interface TocNode {
@@ -84,6 +104,9 @@ export interface ReadingPage {
   effective: string; // ISO date
   blocks: Block[];
   empty: boolean;
+  /** Headings still open at the top of this page, outermost first: the
+   * page opens inside these sections, which began on an earlier page. */
+  continues?: string[];
 }
 
 /** Names emitted on the `tool` SSE event -- one retrieval call each. */

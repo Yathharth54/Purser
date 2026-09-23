@@ -4,8 +4,10 @@ import logging
 
 from purser_agent.schemas import CiteRef
 from purser_api.schemas import Citation
-from purser_core.blocks import parse_blocks
+from purser_core.blocks import parse_blocks, table_state_after, wrap_width
 from purser_core.corpus import Corpus
+from purser_core.outline import annotate_depth
+from purser_core.reading import page_start
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +46,37 @@ def resolve(corpus: Corpus, ref: CiteRef) -> Citation | None:
     # slice's own indexing, or interior furniture is mis-skipped (or, worse,
     # real procedure text is skipped once lo > 0). `blocks` is only how
     # `text` is drawn; `text` itself stays the untouched, byte-exact splice.
-    blocks = parse_blocks(page.lines[lo:hi], [c - lo for c in page.chrome if lo <= c < hi])
+    #
+    # `blocks` must also match what the section reader draws for the same
+    # lines, so the slice is parsed with the state it actually opens in: any
+    # table carried from earlier pages or begun above `lo` on this page, the
+    # headings open at `lo`, and the PAGE's wrap width rather than one
+    # recomputed from the few lines in the slice.
+    start = page_start(corpus, page)
+    full = wrap_width(page.lines, page.chrome)
+    above, above_chrome = page.lines[:lo], [c for c in page.chrome if c < lo]
+    in_table, edge = table_state_after(
+        above, above_chrome, start_in_table=start.in_table, full=full
+    )
+    open_headings = annotate_depth(
+        parse_blocks(above, above_chrome, start_in_table=start.in_table, full=full),
+        list(start.stack),
+    )
+    blocks = parse_blocks(
+        page.lines[lo:hi],
+        [c - lo for c in page.chrome if lo <= c < hi],
+        start_in_table=in_table,
+        table_indent=edge,
+        full=full,
+    )
+    # Nest headings inside the quote, but never indent the whole quote under
+    # the section it sits in: that section is named in `context` instead.
+    # Shift so the shallowest block sits at 0 -- relative nesting survives
+    # (a heading in the quote still owns what follows it).
+    annotate_depth(blocks, open_headings)
+    base = min(b.depth for b in blocks) if blocks else 0
+    for block in blocks:
+        block.depth -= base
 
     return Citation(
         pdf_page=page.pdf_page,
@@ -56,7 +88,17 @@ def resolve(corpus: Corpus, ref: CiteRef) -> Citation | None:
         effective=page.effective,
         text="\n".join(page.lines[lo:hi]),
         blocks=blocks,
+        context=_context(open_headings, blocks),
     )
+
+
+def _context(open_headings: list[tuple[int, str]], blocks: list) -> str | None:
+    """The section the quote sits in. When the quote opens with a heading, that
+    heading closes every open section of its rank or deeper -- naming one of
+    those would label the card with a sibling the quote is not part of."""
+    if blocks and blocks[0].kind == "heading":
+        open_headings = [h for h in open_headings if h[0] < blocks[0].level]
+    return open_headings[-1][1] if open_headings else None
 
 
 def resolve_all(corpus: Corpus, refs: list[CiteRef]) -> list[Citation]:

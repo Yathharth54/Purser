@@ -34,6 +34,9 @@ export function CitationChip({ citation, onOpen }: Props) {
         {/* citation.label is the manual's own nomenclature (e.g. "PART FOUR
             §4.4 p.46"), reproduced verbatim -- never restyled or re-cased. */}
         <span className="paper-label">{citation.label}</span>
+        {/* The section the quote sits in -- context, not quote: it lives in
+            the header so it can never be mistaken for manual text. */}
+        {citation.context ? <span className="paper-ctx">{citation.context}</span> : null}
         <span className="paper-open" aria-hidden="true">
           ⤢
         </span>

@@ -17,7 +17,13 @@ from pathlib import Path
 
 import pytest
 
-from purser_core.blocks import BULLET_GLYPHS, parse_blocks
+from purser_core.blocks import (
+    BULLET_GLYPHS,
+    opens_with_a_row,
+    parse_blocks,
+    table_state_after,
+    wrap_width,
+)
 from purser_core.corpus import Corpus
 
 BULLET = ""  # the Wingdings bullet the manual actually uses, 4,326 times
@@ -189,3 +195,236 @@ def test_no_content_is_lost_on_the_reference_pages():
             if len(words) >= 3:
                 probe = " ".join(words[:3])
                 assert probe in squashed, f"page {pdf_page} line {i} vanished: {line!r}"
+
+
+# --- headings: numbering shape, case, indent --------------------------------
+
+
+@pytest.mark.parametrize(
+    ("line", "level"),
+    [
+        ("3. ADVISORY ON INSTANCES AFFECTING SAFETY OF OPERATION", 1),
+        ("1.6         3 POINT BRIEFING", 2),
+        ("1.9           CARRIAGE OF PREGNANT LADIES", 2),
+        ("1.2. CABIN CREW DUTIES", 2),
+        ("1.46.4 PRE-FLIGHT CHECKS", 3),
+    ],
+)
+def test_numbered_upper_case_titles_are_headings_with_depth_from_the_number(line, level):
+    [b] = parse_blocks([line], [])
+    assert (b.kind, b.level) == ("heading", level)
+
+
+def test_an_indented_numbered_heading_is_still_a_heading():
+    """pdf_page 366 sets '3.   ADVISORY ...' at indent 8; indent is not what makes a heading."""
+    [b] = parse_blocks(["        3.   ADVISORY ON INSTANCES AFFECTING SAFETY OF OPERATION"], [])
+    assert b.kind == "heading"
+
+
+def test_a_numbered_lower_case_line_is_a_step_not_a_heading():
+    """pdf_page 540: '6. Latch the lavatory...' is a procedure step. Calling it a heading
+    would make it own everything after it once sections nest."""
+    out = parse_blocks(
+        [
+            "6. Latch the lavatory and mark it inoperative.",
+            "7. Monitor the lavatory at regular intervals.",
+        ],
+        [],
+    )
+    assert [(b.kind, b.text) for b in out] == [
+        ("step", "6. Latch the lavatory and mark it inoperative."),
+        ("step", "7. Monitor the lavatory at regular intervals."),
+    ]
+
+
+def test_a_table_of_contents_line_is_not_a_heading():
+    out = parse_blocks(["1.1       HANDLING OF PERSONS WITH REDUCED MOBILITY ............ 3"], [])
+    assert out[0].kind != "heading"
+
+
+def test_heading_detection_does_not_backtrack_catastrophically():
+    import time
+
+    t = time.perf_counter()
+    parse_blocks(["1." + "1" * 5000 + "x"], [])
+    assert time.perf_counter() - t < 0.5
+
+
+@needs_index
+def test_a_subsection_heading_closes_the_table_above_it():
+    """pdf_page 299: 'Table 3.5D' must stop at '1.6 3 POINT BRIEFING' -- the heading and
+    the briefing text below it are not table rows."""
+    page = Corpus("data").page(299)
+    out = parse_blocks(page.lines, page.chrome)
+    heads = [(b.text, b.level) for b in out if b.kind == "heading"]
+    assert ("1.6         3 POINT BRIEFING", 2) in heads
+    [table] = [b for b in out if b.kind == "table"]
+    assert "3 POINT BRIEFING" not in table.text
+    assert "Where: The distance" not in table.text
+
+
+@needs_index
+def test_a_body_row_with_an_empty_right_cell_does_not_close_the_table():
+    """pdf_page 596, 'Table 4.4F': the first row is a centred header at indent 9 and
+    the body sits at indent 0. Line 42 ('automatically, I will push it with force
+    to') is a left cell whose right cell is empty -- no column gap. Measuring the
+    table's left edge from the header closed the table there and dropped the rest
+    of the evacuation briefing to prose. The right column repeats the same words,
+    so "it is in the table" alone proves nothing; it must not ALSO be a para.
+    """
+    page = Corpus("data").page(596)
+    line = page.lines[42].strip()
+    assert line == "automatically, I will push it with force to"
+    out = parse_blocks(page.lines, page.chrome)
+    assert not [b for b in out if b.kind == "para" and line in b.text]
+    assert [b for b in out if b.kind == "table" and line in b.text]
+
+
+# --- notes, cautions, warnings ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Note 1: Do not use any subjective words like think, feel etc.",
+        "Note: 1: Cabin crew covered by table 1.1O, whose weekly rest is due",
+        "Note — Liquid may turn to steam when applied to a hot surface",
+        "Note. — Actions should occur simultaneously",
+        "Caution: Do not open the door",
+        "WARNING - Oxygen supports combustion",
+    ],
+)
+def test_note_labels_with_a_number_or_dash_are_notes(line):
+    [b] = parse_blocks([line], [])
+    assert (b.kind, b.text) == ("note", line)
+
+
+def test_note_used_as_a_verb_is_not_a_note():
+    [b] = parse_blocks(["Note the FAPs on some of the aircraft do not have"], [])
+    assert b.kind == "para"
+
+
+def test_a_bare_note_label_adopts_the_line_below_as_its_body():
+    """pdf_page 152: 'Note:' alone on its line, its body on the next line."""
+    out = parse_blocks(
+        [
+            "Note:",
+            "For duties & Responsibilities of Safety Manager, refer Chapter 6",
+        ],
+        [],
+    )
+    assert [(b.kind, b.text) for b in out] == [
+        ("note", "Note: For duties & Responsibilities of Safety Manager, refer Chapter 6")
+    ]
+
+
+def test_a_bare_note_label_does_not_swallow_a_bullet_below_it():
+    """pdf_page 260: 'Note:' introduces a bulleted list; the bullets stay bullets."""
+    out = parse_blocks(["Note:", "    " + BULLET + "   During the pre-flight check, check it"], [])
+    assert [b.kind for b in out] == ["note", "bullet"]
+    assert out[0].text == "Note:"
+
+
+@needs_index
+def test_a_page_level_note_closes_the_table_above_it():
+    """pdf_page 366: 'Table 3.5Y' is followed by a full-width 'Note:' and then the
+    '3. ADVISORY ...' section. Neither is a table row; the note carries safety
+    emphasis and must render as a note."""
+    page = Corpus("data").page(366)
+    out = parse_blocks(page.lines, page.chrome)
+    [table] = [b for b in out if b.kind == "table"]
+    assert "the cabin shall never be sprayed" not in table.text
+    assert any(
+        b.kind == "note" and b.text.startswith("Note: the cabin shall never be sprayed")
+        for b in out
+    )
+    assert any(b.kind == "heading" and "ADVISORY ON INSTANCES" in b.text for b in out)
+
+
+# --- state across a page boundary --------------------------------------------
+
+ROWS = [
+    "  Escape slide equipped            Slide raft equipped",
+    "  To ABP 1: In case of             To ABP 1: In case of",
+]
+
+
+def test_parsing_can_start_inside_a_table_that_began_on_an_earlier_page():
+    out = parse_blocks(ROWS, [], start_in_table=True)
+    assert [b.kind for b in out] == ["table"]
+
+
+def test_by_default_a_page_never_starts_inside_a_table():
+    out = parse_blocks(ROWS, [])
+    assert "table" not in [b.kind for b in out]
+
+
+def test_a_carried_table_edge_decides_whether_a_gapless_line_is_a_row():
+    prose = "automatically, I will push it"
+    inside = parse_blocks([prose], [], start_in_table=True, table_indent=0)
+    outside = parse_blocks([prose], [], start_in_table=True, table_indent=10)
+    assert [b.kind for b in inside] == ["table"]
+    assert [b.kind for b in outside] == ["para"]
+
+
+def test_the_wrap_width_can_be_supplied_by_the_caller():
+    """A citation parses a slice of a page; it must rejoin wrapped lines using the
+    page's width, not a width recomputed from the few lines it was handed."""
+    lines = ["Cabin crew shall check the", "door before arming."]
+    joined = parse_blocks(lines, [], full=10)
+    unjoined = parse_blocks(lines, [], full=200)
+    assert [b.text for b in joined] == ["Cabin crew shall check the door before arming."]
+    assert len(unjoined) == 2
+
+
+def test_wrap_width_is_the_70th_percentile_line_width_less_four():
+    lines = ["x" * n for n in (10, 20, 30, 40, 50, 60, 70, 80, 90, 100)]
+    assert wrap_width(lines, []) == 80 - 4
+
+
+def test_table_state_after_reports_an_open_table_and_its_edge():
+    lines = ["Table 4.4F", *ROWS]
+    assert table_state_after(lines, []) == (True, 2)
+
+
+def test_table_state_after_reports_a_table_closed_by_a_heading():
+    lines = ["Table 4.4F", *ROWS, "2. CREW RESPONSIBILITIES"]
+    assert table_state_after(lines, []) == (False, None)
+
+
+def test_opens_with_a_row_skips_chrome_and_blank_lines():
+    lines = ["ifly.SEP   header", "", *ROWS]
+    assert opens_with_a_row(lines, [0])
+    assert not opens_with_a_row(["Cabin crew to ensure that at least one seat"], [])
+
+
+@needs_index
+@pytest.mark.parametrize(
+    ("prev", "page", "carried"),
+    [
+        (596, 597, True),  # Table 4.4F continues: land vs ditching, two columns
+        (181, 182, False),  # prose follows a page that ended in a table
+        (299, 300, False),
+    ],
+)
+def test_a_table_is_carried_onto_the_next_page_only_when_that_page_opens_with_a_row(
+    prev, page, carried
+):
+    corpus = Corpus("data")
+    p0, p1 = corpus.page(prev), corpus.page(page)
+    ended_in_table, _ = table_state_after(p0.lines, p0.chrome)
+    carry = ended_in_table and opens_with_a_row(p1.lines, p1.chrome)
+    out = parse_blocks(p1.lines, p1.chrome, start_in_table=carry)
+    assert ("table" in [b.kind for b in out]) is carried
+
+
+def test_a_carried_table_closed_before_any_row_leaves_no_empty_table():
+    """A page that was carried into a table but opens with blank lines and then a
+    heading must not emit an empty table block (pdf 759, 813, 819, 822, 826)."""
+    out = parse_blocks(["", "", "2.         EXTERIOR DESCRIPTION"], [], start_in_table=True)
+    assert [b.kind for b in out] == ["heading"]
+
+
+def test_a_page_opening_with_a_gapped_heading_does_not_open_with_a_row():
+    assert not opens_with_a_row(["", "2.         EXTERIOR DESCRIPTION"], [])
+    assert not opens_with_a_row(["Table 4.4F"], [])

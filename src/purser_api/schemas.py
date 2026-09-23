@@ -20,6 +20,9 @@ class Citation(BaseModel):
     effective: date
     text: str
     blocks: list[Block] = []
+    # The innermost heading open where the quote begins, for the card header.
+    # Display only: it is NOT part of the quote, and `text` never includes it.
+    context: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

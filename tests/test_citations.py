@@ -216,3 +216,59 @@ def test_chrome_is_rebased_onto_the_trimmed_slice_not_passed_page_absolute(corpu
     assert "Aircraft Electronic Copy" not in unrebased_words
     assert "downloadable copy" not in unrebased_words
     assert "ifly.SEP" in unrebased_words
+
+
+# --- a citation reads like the reader: same tables, same sections ----------------
+
+
+def test_a_citation_on_a_continuation_page_draws_its_table(corpus):
+    """pdf 597 continues Table 4.4F with no caption. Parsed as an isolated slice it
+    interleaved land and ditching procedures; the card must match the reader.
+    `text` is still the untouched splice."""
+    page = corpus.page(597)
+    cite = resolve(corpus, CiteRef(pdf_page=597, line_from=0, line_to=len(page.lines)))
+    assert "table" in [b.kind for b in cite.blocks]
+    assert cite.text in "\n".join(page.lines)
+
+
+def test_a_citation_starting_mid_table_stays_in_the_table(corpus):
+    """Cite pdf 596 from line 40: the slice opens inside Table 4.4F, and line 42 (a
+    left cell whose right cell is empty) must not become a paragraph."""
+    page = corpus.page(596)
+    cite = resolve(corpus, CiteRef(pdf_page=596, line_from=40, line_to=46))
+    line = page.lines[42].strip()
+    assert cite.text in "\n".join(page.lines[40:46])
+    assert not [b for b in cite.blocks if b.kind == "para" and line in b.text]
+    assert [b for b in cite.blocks if b.kind == "table" and line in b.text]
+
+
+def test_a_citation_names_the_section_it_sits_in(corpus):
+    """The top of pdf 300 is still '1.6 3 POINT BRIEFING', opened on pdf 299. The card
+    says so -- outside the quote -- and does not indent the whole quote under it."""
+    cite = resolve(corpus, CiteRef(pdf_page=300, line_from=0, line_to=40))
+    assert cite.context == "1.6         3 POINT BRIEFING"
+    assert min(b.depth for b in cite.blocks) == 0
+    assert "3 POINT BRIEFING" not in cite.text
+
+
+def test_a_citation_nests_headings_inside_its_own_range(corpus):
+    page = corpus.page(299)
+    cite = resolve(corpus, CiteRef(pdf_page=299, line_from=0, line_to=len(page.lines)))
+    [head] = [b for b in cite.blocks if b.kind == "heading" and "3 POINT BRIEFING" in b.text]
+    after = cite.blocks[cite.blocks.index(head) + 1]
+    assert after.depth == head.depth + 1
+
+
+@pytest.mark.parametrize(
+    ("pdf_page", "line", "context"),
+    [
+        (35, 24, None),  # "2. AIRCRAFT RULES OF 1937" closes "1. INTRODUCTION"
+        (36, 23, "2. AIRCRAFT RULES OF 1937"),  # "2.3 ..." closes its sibling "2.2 ..."
+    ],
+)
+def test_a_quote_starting_with_a_heading_is_not_labelled_with_the_section_it_closes(
+    corpus, pdf_page, line, context
+):
+    cite = resolve(corpus, CiteRef(pdf_page=pdf_page, line_from=line, line_to=line + 4))
+    assert cite.blocks[0].kind == "heading"
+    assert cite.context == context
