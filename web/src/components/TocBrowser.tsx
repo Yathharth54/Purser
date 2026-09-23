@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchSection, fetchToc } from "../api/client";
 import type { PageText, TocNode } from "../api/types";
+import { displayManualText } from "../lib/manualText";
 
 export function TocBrowser() {
   const [nodes, setNodes] = useState<TocNode[]>([]);
@@ -44,9 +45,11 @@ export function TocBrowser() {
               <span className="toc-pages">{n.pages} pp</span>
             </button>
             {open && (
+              // See web/src/lib/manualText.ts -- render-time-only PUA glyph
+              // substitution, never applied to the underlying PageText.
               <pre className="toc-preview">
                 {pages.length > 0
-                  ? pages.flatMap((p) => p.numbered_lines).slice(0, 40).join("\n")
+                  ? displayManualText(pages.flatMap((p) => p.numbered_lines).slice(0, 40).join("\n"))
                   : "Loading…"}
               </pre>
             )}

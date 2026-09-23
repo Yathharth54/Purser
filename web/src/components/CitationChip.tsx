@@ -9,6 +9,7 @@
 // (Filename kept as the task-17/18 interface names it; the component itself
 // supersedes the brief's small-button sketch per the binding design plan.)
 import type { Citation } from "../api/types";
+import { displayManualText } from "../lib/manualText";
 
 interface Props {
   citation: Citation;
@@ -28,8 +29,12 @@ export function CitationChip({ citation, onOpen }: Props) {
       <p className="citation-label">{citation.label}</p>
       {/* citation.text is verbatim, server-spliced manual text. Its leading
           whitespace is load-bearing (procedure-table column alignment from
-          `pdftotext -layout`) -- never trim, normalise, or collapse it. */}
-      <pre className="citation-text">{citation.text}</pre>
+          `pdftotext -layout`) -- never trim, normalise, or collapse it.
+          displayManualText() only substitutes unrenderable PUA glyphs
+          (tofu boxes) for their intended bullet marks at render time --
+          see web/src/lib/manualText.ts. It never touches `citation.text`
+          itself. */}
+      <pre className="citation-text">{displayManualText(citation.text)}</pre>
       <p className="citation-revision">{citation.revision ?? "Revision not stated"}</p>
     </button>
   );

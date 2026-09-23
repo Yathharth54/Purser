@@ -202,6 +202,16 @@ main {
   white-space: pre-wrap;
 }
 
+/* A readable measure for the assistant's own prose -- unconstrained, a
+   laptop-width answer runs the full viewport (~1450px), which is what
+   recurrent-training reading on a laptop actually hits. This applies to
+   the assistant's voice only: citation/manual mono text is deliberately
+   left unconstrained here, since its width is governed by the manual's
+   own layout (procedure-table columns), not by prose typesetting. */
+.turn-assistant .turn-body {
+  max-width: 70ch;
+}
+
 .turn-pending {
   color: var(--dim);
 }

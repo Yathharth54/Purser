@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { pageImageUrl } from "../api/client";
 import type { Citation } from "../api/types";
+import { displayManualText } from "../lib/manualText";
 
 interface Props {
   citation: Citation | null;
@@ -109,7 +110,9 @@ export function PageDrawer({ citation, onClose }: Props) {
               </button>
             </header>
 
-            <pre className="drawer-text">{rendered.text}</pre>
+            {/* See web/src/lib/manualText.ts -- render-time-only PUA glyph
+                substitution, never applied to `rendered.text` itself. */}
+            <pre className="drawer-text">{displayManualText(rendered.text)}</pre>
 
             <div className="drawer-image">
               {image.status === "loading" && <p className="drawer-note">Loading the manual page…</p>}
