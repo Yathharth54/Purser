@@ -73,7 +73,7 @@ class PageText(BaseModel):
     section: str | None
     section_title: str | None
     page_in_section: int
-    numbered_lines: list[str]  # "12| CABIN CREW SHALL..." — index is the citable one
+    numbered_lines: list[str]  # "12|CABIN CREW SHALL..." — index is the citable one
 
 
 class SectionHit(BaseModel):
