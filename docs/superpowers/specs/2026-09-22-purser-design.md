@@ -102,12 +102,16 @@ class Page(BaseModel):
     effective: date
     revision: str | None  # "Issue IX Revision 00", from the page header
     lines: list[str]  # verbatim, 0-indexed, the citation substrate
+    chrome: list[int] = []  # indices into `lines` that are page furniture (§17.1)
     text: str  # lines joined, for FTS5 and embedding
 ```
 
 `page_in_section` and `pdf_page` are both kept deliberately: the first is what she
 reads in a citation, the second is what the renderer needs. They are not interchangeable
 and conflating them would produce citations that look right and point wrong.
+
+`chrome` is populated at construction and never renumbers `lines` — see §17.1 for the
+measurement that motivated it and the ingest-time detector that produces it.
 
 ### Verified structure
 
@@ -410,7 +414,7 @@ FastAPI. Thin: streaming, session persistence, and citation resolution.
 | `POST /chat` | SSE stream. Body `{thread_id, message}`. Emits token deltas then a final `citations` event. |
 | `GET /threads` / `GET /threads/{id}` | Conversation list and history. |
 | `GET /toc` | The parsed tree, for the browser surface. |
-| `GET /section/{section}` | Verbatim section text for reading. |
+| `GET /section/{section}` | `ReadingPage[]` — the section shaped for reading, blocks not lines. See §17.2. |
 | `GET /page/{pdf_page}/image` | Rendered WebP, cached. |
 
 ### 10.1 Citation resolution — the splice
@@ -451,11 +455,16 @@ OpenAPI schema so the Pydantic models remain the single source of truth.
 
 **Surfaces**
 
-- **Chat** — streaming answers, thread history, phone-first.
-- **Citation chip** — `[PART FOUR §4.4 p.34]` inline. Tapping opens a drawer with the
-  verbatim text *and the rendered manual page image*. This is the trust anchor: the
-  model is a finder, her eyes remain the authority.
-- **TOC browser** — the tree, for when she'd rather navigate than ask.
+- **Chat** — streaming answers, thread history, phone-first. A segmented Ask/Manual
+  control switches surfaces without losing the conversation.
+- **Citation** — rendered as a paper-card extract (headings, notes, tables — see §17.3's
+  `<ManualBlocks>`) inline in the chat, labelled e.g. `PART FOUR §4.4 p.34`. Tapping opens
+  a bottom-sheet drawer with the verbatim de-chromed text *and the real rendered manual
+  page image, letterhead included*. This is the trust anchor: the model is a finder, her
+  eyes remain the authority.
+- **Manual / section reader** — the TOC tree, for when she'd rather navigate than ask,
+  and a full section reader that renders every page of a section as a document via the
+  same `<ManualBlocks>` renderer (§17.2, §17.4).
 
 `manifest.webmanifest` with `display: standalone` so Add to Home Screen gives a
 full-screen app with its own icon. No App Store, no developer account, no review.
@@ -570,3 +579,160 @@ controlled document rather than a secret one, and this was an explicit user deci
 
 *Resolved 2026-09-22:* glossary parse fidelity — see §6.5. Three structures, all
 verified against the document.
+
+## 17. Amendments — 2026-09-23 (furniture, structure, and the two manual views)
+
+Fourteen further tasks landed on `feat/purser-v2` after this spec was written. This
+section records what they changed, verified end to end in a rebuilt container. Nothing
+below removes a principle from §3; it discharges the open items in §14/§16 the previous
+version left as "the door is open."
+
+### 17.1 Page furniture is detected, never removed (Tasks 1–5)
+
+**Measured against the corpus:** of the manual's 49,723 lines, 6,100 (12.2%) are one of
+six boilerplate lines repeated on almost every page (letterhead, "NOT A CONTROLLED
+COPY", the running Part/Section header, the page-number/revision footer), and a further
+19,347 are blank. Together, furniture and blank lines are **51%** of the corpus —
+meaning only **49% of the manual's lines are actual content**. This is the "49%-content
+measurement": it is what motivated Phase A, and it is why a naive per-page vector or a
+naive citation extract was half letterhead before this work.
+
+`chrome_line_indices(lines) -> list[int]` (`purser_ingest/chrome.py`) identifies which
+lines are furniture. It **never rewrites or renumbers** `Page.lines`. `Page.chrome:
+list[int]` stores those indices, populated at construction. `Page.content_lines()`
+returns `(original_index, text)` pairs for every non-blank, non-furniture line, with the
+index deliberately preserved as the *original* one — because `CiteRef.line_from` /
+`line_to` are indices into the full, unfiltered `Page.lines`, and every citation ever
+stored depends on those indices never moving. Renumbering here would read correctly and
+point at the wrong line, which is the worst defect this project can ship (see §13.1).
+
+The agent-facing view (`PageText.numbered_lines`, consumed by `read_section`/`read_page`)
+is built from `content_lines()`, so the model reads and cites content lines only — it
+never sees letterhead and cannot accidentally quote it. Citations resolved for display
+also trim chrome from their edges via the same mechanism.
+
+**A gated experiment was run and reverted.** Task 5 asked whether re-embedding each page
+from `content_lines()` (furniture stripped from the embedding input) improves retrieval,
+gated on the same 40-question eval used throughout this project:
+
+| | recall@8 | top-3 | MRR |
+| --- | --- | --- | --- |
+| Baseline (chrome present in embedding input) | **100.0%** (40/40) | 85.0% (34/40) | **0.748** |
+| De-chromed embeddings | 97.5% (39/40) | 87.5% (35/40) | 0.740 |
+
+The gate's rule keeps a change only if recall@8 reaches 100% *and* MRR does not drop; a
+result that is neither at 100% nor below the 95% floor is a regression on the metric that
+matters most (recall) traded for a few points on one that matters less (top-3), so it was
+**reverted**. `src/purser_ingest/embed_build.py` embeds full page text, chrome included.
+
+**This is counter-intuitive, and it is worth stating plainly so nobody retries it: page
+furniture is not uniform noise.** 2,340 of the 6,100 chrome lines carry a `PART`/`Section`
+label, and the running header repeats the section title on every page it appears on —
+so stripping it removes real retrieval signal (a page's own section name, restated once
+per page) along with the boilerplate. The wiring fix that populates `Page.chrome` at
+construction was kept regardless of the gate's outcome — it is what makes furniture
+*detectable*, which is orthogonal to whether it should be *removed from embeddings*, and
+those are two different questions with two different answers here.
+
+### 17.2 The manual has a real structure, and two views onto it (Tasks 6–7, 10)
+
+A block parser (`purser_core/blocks.py`, `parse_blocks`) recovers the manual's actual
+document structure from `content_lines()`: headings and subheadings, bullets with their
+PDF-hard-wrapped continuations rejoined into one sentence, notes, table/figure captions,
+and verbatim two-column tables (kept as their own newlines and leading spaces, because
+the columns are the information — rendered in a monospace face, never rejoined).
+
+```python
+class Block(BaseModel):
+    kind: Literal["heading", "subheading", "para", "bullet", "note", "caption", "table"]
+    level: int = 0
+    text: str
+```
+
+`text` is verbatim for every kind except `para`, `bullet` and `note`, where hard-wrapped
+lines are rejoined with a single space — restoring the sentence the author wrote, since
+the line break at column 90 was a layout artifact, not meaning.
+
+**There are now two shapes for a page, deliberately kept apart:**
+
+- `PageText.numbered_lines` — **agent-facing.** `"12|CABIN CREW SHALL..."`, one string
+  per content line, index preserved so a `CiteRef` the model emits is directly citable.
+  Unchanged by this work; the model's view of a page was never blocks.
+- `ReadingPage.blocks: list[Block]`, served by `GET /api/section/{section}` —
+  **human-facing.** The same page, structured for a person to read rather than a model to
+  cite. This endpoint's return type changed from a flat `PageText[]` line-dump to
+  `ReadingPage[]` in Task 7 — the authoritative record is
+  `.superpowers/sdd/2026-09-22-purser/api-contract.md`.
+- `Citation.blocks: list[Block]`, added alongside `Citation.text` in Task 7. **`text`
+  remains the byte-exact splice of `Page.lines[line_from:line_to]` — the guarantee that
+  every quote is correct by construction (§9.1, principle 2). `blocks` is only
+  presentation**, a nicer default render of that same text. If the two ever disagree
+  about the words, `text` is right; `test_citations.py` asserts both are present on a
+  resolved citation and that they agree.
+
+`ReadingPage.empty: bool` is `True` for the 8 pages of the manual that carry no text
+after de-chroming (their `blocks` is `[]`); they are still returned, in position, not
+skipped — dropping one would renumber the section against the paper manual a reader is
+cross-checking against.
+
+**A defect this design guards against, found and fixed in this phase:** an earlier
+version of the reader capped section reads at 4 pages / 40 lines, so opening a long
+section (§4.4, 80 pages) appeared to show only its first page. Fixed in `fix(web): read
+the whole section, not the first forty lines` (`218f9ef`) and verified in this task by
+reaching page 80 of 80 with real content in a rebuilt container (§17.4 below).
+
+### 17.3 Brand, depth, and the manual as paper (Tasks 8–13)
+
+The web surface was rebuilt on brand tokens (a warm night palette plus a narrow gold
+accent — the tripwire is that gold appears only on the manual's edge, the active tab,
+focus rings and the send control, nowhere else) and a three-tier depth system, with
+frosted chrome and an ARIA-correct segmented control for Ask/Manual. `<ManualBlocks>`
+is the one renderer for `Block[]` shared by the chat citation extract, the section
+reader, and the page drawer — headings, bullets, notes and monospace tables all render
+consistently in both surfaces because they share the same component. Chat citations show
+as a paper-card extract (the same `<ManualBlocks>` output) rather than a raw text dump.
+The page drawer opens as a bottom sheet showing the true scanned page image (with its
+real IndiGo letterhead, "NOT A CONTROLLED COPY" watermark and footer) alongside the
+de-chromed extract — the trust anchor described in §11 unchanged, now correctly showing
+the manual's own page rather than a placeholder.
+
+### 17.4 Verified end to end (Task 14)
+
+Rebuilt in the container (`docker compose up -d --build`), driven from Python via
+`httpx` and via a real Chrome browser rather than assumed from unit tests. Observed,
+not merely expected:
+
+- "what do I do in a ditching?" streamed a real answer and four citations
+  (`PART FOUR §4.4 p.28`–`p.31`); the first citation's text began
+  `"In case of a planned ditching the nine steps for prepar…"` — manual text, no
+  letterhead.
+- The citation's paper-card extract in chat rendered as a document — a bold heading, a
+  styled `Note:` callout, a bold sub-line — not a line dump.
+- Tapping a citation opened the drawer: a monospace de-chromed extract above the real
+  scanned page image, letterhead (`InterGlobe Aviation Limited`, `ifly.SEP`, the IndiGo
+  mark, the red vertical "…PORTAL/ E-MANUAL" watermark) and all.
+- §4.4 opened at page 1 of 80 and scrolling reached **page 80 of 80** with real
+  procedural content (bullets, sub-headings) — the bug in §17.2 above stays fixed.
+- §1.1 opened at **page 3 of 76**, not page 1 — the manual's own front-matter offset
+  (§6.3) surfaced correctly in the reader, including the intentionally-blank page 4
+  shown in position rather than skipped.
+- Switching from Ask to Manual and back kept the conversation in place (a prior
+  regression, guarded against here).
+- Day and cabin themes were both legible; the gold accent stayed confined to citation
+  labels, card edges and the active tab in both.
+- At a true 360px CSS-pixel width (verified via `iframe.contentWindow.innerWidth`,
+  since the sandbox's window-resize tool does not work here), the document root showed
+  **no horizontal scroll** — `scrollWidth === clientWidth === 360` — even on a
+  table-heavy page. Individual monospace tables scroll horizontally within their own
+  bounds by design; the page itself does not.
+
+### 17.5 Two corrections on record
+
+- **The rebuild command in early drafts of this plan was wrong.** `python -m
+  purser_ingest.cli` is a silent no-op: `cli.py` has no `if __name__ == "__main__"`
+  guard, so the module runs its imports, prints nothing, and exits 0 without ingesting
+  anything. The real entrypoint is the packaged console script, `purser ingest
+  "<manual>.pdf" --out data/` (already what §6 above and the README document — this note
+  exists so a future edit does not reintroduce the wrong form).
+- **De-chroming page embeddings made retrieval worse.** See §17.1. Do not retry this
+  without new evidence; the gate and its numbers are recorded above.
