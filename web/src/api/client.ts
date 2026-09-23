@@ -1,6 +1,6 @@
 import type {
   Citation,
-  PageText,
+  ReadingPage,
   ThreadMessage,
   ThreadSummary,
   TocNode,
@@ -224,15 +224,19 @@ async function getJSON<T>(path: string): Promise<T> {
 
 export const fetchToc = (): Promise<TocNode[]> => getJSON<TocNode[]>("/api/toc");
 
-export const fetchSection = (
-  section: string,
-  pageFrom = 1,
-  pageTo?: number,
-): Promise<PageText[]> => {
-  const params = new URLSearchParams({ page_from: String(pageFrom) });
-  if (pageTo !== undefined) params.set("page_to", String(pageTo));
-  return getJSON<PageText[]>(`/api/section/${encodeURIComponent(section)}?${params.toString()}`);
-};
+/**
+ * GET /api/section/{section} -- every `ReadingPage` in the section, in
+ * order, no bounds. Task 7 moved this endpoint's response shape to
+ * `ReadingPage[]` (whole pages, parsed into `blocks`) and the endpoint
+ * itself already returns the entire section with no server-side cap; this
+ * client used to also accept `pageFrom`/`pageTo` and the one caller
+ * (`TocBrowser`) used them to request only the first few pages, which was
+ * the actual bug (see that component). Nothing needs a partial read
+ * client-side, so this stays a single-argument call -- no page-bound
+ * parameters exist here to be silently reintroduced as a cap.
+ */
+export const fetchSection = (section: string): Promise<ReadingPage[]> =>
+  getJSON<ReadingPage[]>(`/api/section/${encodeURIComponent(section)}`);
 
 /** Not fetched here -- returns the same-origin/proxied URL for an <img src>. */
 export const pageImageUrl = (pdfPage: number): string => `/api/page/${pdfPage}/image`;
