@@ -355,9 +355,9 @@ main {
    section reader (Task 12) -- see the mockup's "Manual" demo section,
    which is authoritative over the plan prose wherever the two disagree.
    No outer color is set here beyond what each kind specifies explicitly;
-   .m-p/.m-li/.m-cap inherit their caller's ambient text color (--text on
-   the app background, --paper-ink inside a .paper card) exactly as the
-   approved mockup does. */
+   .m-p/.m-li inherit their caller's ambient text color (--text on the app
+   background, --paper-ink inside a .paper card) exactly as the approved
+   mockup does. */
 
 .manual-blocks {
   font-family: var(--ff-ui);
