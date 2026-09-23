@@ -61,3 +61,26 @@ def test_vectors_align_with_pdf_page(corpus, embedder):
 def test_unknown_page_raises(corpus):
     with pytest.raises(KeyError):
         corpus.page(99999)
+
+
+def test_page_carries_its_chrome_indices(corpus):
+    page = corpus.page(600)
+    assert page.chrome, "page 600 prints letterhead; chrome must not be empty"
+    assert all(0 <= i < len(page.lines) for i in page.chrome)
+    for i in page.chrome:
+        assert page.lines[i].strip(), "a blank line is never chrome"
+
+
+def test_content_lines_keeps_ORIGINAL_indices(corpus):
+    """The index is the citation coordinate. It must survive filtering.
+
+    If content_lines() renumbered from zero, every CiteRef the agent emits would
+    point at the wrong line -- and the failure would be silent, because the text
+    spliced out would still look like plausible manual prose.
+    """
+    page = corpus.page(600)
+    pairs = page.content_lines()
+    assert len(pairs) == 31
+    for i, text in pairs:
+        assert page.lines[i] == text
+        assert i not in page.chrome

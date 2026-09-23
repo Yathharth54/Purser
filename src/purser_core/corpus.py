@@ -11,13 +11,14 @@ from purser_core.models import GlossaryEntry, Page, TocNode
 
 _COLUMNS = (
     "pdf_page, part, section, section_title, page_in_section, "
-    "section_total, effective, revision, lines, text"
+    "section_total, effective, revision, lines, chrome, text"
 )
 
 
 def _row_to_page(row: sqlite3.Row) -> Page:
     data = dict(row)
     data["lines"] = json.loads(data["lines"])
+    data["chrome"] = json.loads(data["chrome"])
     return Page(**data)
 
 

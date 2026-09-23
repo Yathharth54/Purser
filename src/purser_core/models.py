@@ -51,7 +51,18 @@ class Page(BaseModel):
     effective: date
     revision: str | None
     lines: list[str]  # verbatim, 0-indexed — the citation substrate
+    chrome: list[int] = []  # indices into `lines` that are page furniture
     text: str  # lines joined, for FTS5 and embedding
+
+    def content_lines(self) -> list[tuple[int, str]]:
+        """(original index, text) for every non-blank, non-furniture line.
+
+        The index is deliberately the ORIGINAL one. It is what CiteRef.line_from
+        and line_to mean, and renumbering here would break every citation while
+        still producing text that reads correctly.
+        """
+        skip = set(self.chrome)
+        return [(i, s) for i, s in enumerate(self.lines) if s.strip() and i not in skip]
 
 
 class PageText(BaseModel):
