@@ -15,7 +15,9 @@
  *  - Day ([data-theme="day"], the default) is the primary design. Cabin
  *    ([data-theme="cabin"]) is the dim-light reading mode against a navy
  *    ground, not a generic dark theme.
- *  - The only orchestrated motion is the page drawer sliding up.
+ *  - Orchestrated motion is deliberately rare: the page drawer sliding up,
+ *    and the segmented control's thumb sliding between Ask and Manual.
+ *    Both respect prefers-reduced-motion via the global rule below.
  */
 
 * {
@@ -179,8 +181,11 @@ button {
 .seg button {
   position: relative;
   z-index: 1;
+  /* padding matches the mockup's .seg span (7px 0) exactly; min-height is
+     the only addition, so the 44px touch-target floor is met without
+     changing the visual padding the mockup specifies. */
   min-height: 44px;
-  padding: 10px 2px;
+  padding: 7px 0;
   font-size: 13.5px;
   color: var(--dim);
   background: none;

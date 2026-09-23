@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Chat } from "./components/Chat";
 import { PageDrawer } from "./components/PageDrawer";
 import { TocBrowser } from "./components/TocBrowser";
@@ -32,6 +32,35 @@ export default function App() {
   const [seenManual, setSeenManual] = useState(false);
   const [citation, setCitation] = useState<Citation | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  const chatTabRef = useRef<HTMLButtonElement>(null);
+  const manualTabRef = useRef<HTMLButtonElement>(null);
+
+  function selectTab(next: "chat" | "manual") {
+    if (next === "manual") setSeenManual(true);
+    setTab(next);
+  }
+
+  // ARIA Tabs pattern: the tablist is a single Tab stop (roving tabindex --
+  // only the selected tab is tabbable) and ArrowLeft/ArrowRight/Home/End
+  // move both the selection and focus between the two tabs. Without the
+  // focus move, a screen-reader user who reaches for the arrow keys after
+  // landing on "tab, 1 of 2" gets nothing.
+  function handleSegKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    let next: "chat" | "manual" | null = null;
+    if (event.key === "ArrowRight") {
+      next = tab === "chat" ? "manual" : "chat";
+    } else if (event.key === "ArrowLeft") {
+      next = tab === "chat" ? "manual" : "chat";
+    } else if (event.key === "Home") {
+      next = "chat";
+    } else if (event.key === "End") {
+      next = "manual";
+    }
+    if (!next) return;
+    event.preventDefault();
+    selectTab(next);
+    (next === "chat" ? chatTabRef : manualTabRef).current?.focus();
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -68,10 +97,13 @@ export default function App() {
             type="button"
             role="tab"
             id="tab-chat"
+            ref={chatTabRef}
+            tabIndex={tab === "chat" ? 0 : -1}
             aria-selected={tab === "chat"}
             aria-controls="panel-chat"
             className={tab === "chat" ? "on" : undefined}
-            onClick={() => setTab("chat")}
+            onClick={() => selectTab("chat")}
+            onKeyDown={handleSegKeyDown}
           >
             Ask
           </button>
@@ -79,13 +111,13 @@ export default function App() {
             type="button"
             role="tab"
             id="tab-manual"
+            ref={manualTabRef}
+            tabIndex={tab === "manual" ? 0 : -1}
             aria-selected={tab === "manual"}
             aria-controls="panel-manual"
             className={tab === "manual" ? "on" : undefined}
-            onClick={() => {
-              setSeenManual(true);
-              setTab("manual");
-            }}
+            onClick={() => selectTab("manual")}
+            onKeyDown={handleSegKeyDown}
           >
             Manual
           </button>
