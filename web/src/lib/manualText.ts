@@ -52,7 +52,7 @@ function isPrivateUse(codepoint: number): boolean {
 
 /**
  * Render-time substitution for a verbatim manual text string. Returns a new
- * string; never mutates or is applied to the `Citation`/`PageText` objects
+ * string; never mutates or is applied to the `Citation`/`ReadingPage` objects
  * themselves, so the underlying data stays byte-exact for anything else
  * that touches it (copy, future export, etc.) -- only what's painted to
  * the screen is affected.

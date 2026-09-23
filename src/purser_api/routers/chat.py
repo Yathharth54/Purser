@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 from purser_api.citations import resolve_all
 from purser_api.db import Message, Thread, session
 from purser_api.deps import get_agent, get_deps, get_tools
-from purser_api.schemas import ChatRequest, ThreadSummary
+from purser_api.schemas import ChatRequest, ThreadMessage, ThreadSummary
 
 router = APIRouter(prefix="/api", tags=["chat"])
 _HISTORY_TURNS = 12
@@ -26,8 +26,8 @@ def list_threads() -> list[ThreadSummary]:
         ]
 
 
-@router.get("/threads/{thread_id}")
-def get_thread(thread_id: str) -> list[dict]:
+@router.get("/threads/{thread_id}", response_model=list[ThreadMessage])
+def get_thread(thread_id: str) -> list[ThreadMessage]:
     with session() as s:
         if s.get(Thread, thread_id) is None:
             raise HTTPException(status_code=404, detail="no such thread")
@@ -35,7 +35,7 @@ def get_thread(thread_id: str) -> list[dict]:
             select(Message).where(Message.thread_id == thread_id).order_by(Message.created_at)
         ).all()
         return [
-            {"role": m.role, "body": m.body, "citations": json.loads(m.citations_json)}
+            ThreadMessage(role=m.role, body=m.body, citations=json.loads(m.citations_json))
             for m in rows
         ]
 

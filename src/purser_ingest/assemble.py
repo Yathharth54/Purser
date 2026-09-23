@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 
 from purser_core.models import Page, PartName
+from purser_ingest.chrome import chrome_line_indices
 from purser_ingest.footers import parse_footer
 from purser_ingest.headers import parse_header
 
@@ -67,6 +68,7 @@ def assemble(raw_pages: list[str]) -> list[Page]:
                     effective=date.min,  # backfilled below, once a real date is known
                     revision=revision,
                     lines=lines,
+                    chrome=chrome_line_indices(lines),
                     text="\n".join(lines),
                 )
             )
@@ -91,6 +93,7 @@ def assemble(raw_pages: list[str]) -> list[Page]:
                 effective=coord.effective,
                 revision=revision,
                 lines=lines,
+                chrome=chrome_line_indices(lines),
                 text="\n".join(lines),
             )
         )

@@ -1,13 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchSection, fetchToc } from "../api/client";
-import type { PageText, TocNode } from "../api/types";
-import { displayManualText } from "../lib/manualText";
+import type { ReadingPage, TocNode } from "../api/types";
+import { ManualBlocks } from "./ManualBlocks";
 
+type SectionState =
+  | { status: "loading" }
+  | { status: "ready"; pages: ReadingPage[] }
+  | { status: "error"; detail: string };
+
+/**
+ * The manual's contents list and section reader.
+ *
+ * This replaces a "preview" that requested `Math.min(4, …)` pages from the
+ * API and then rendered `.slice(0, 40)` of the resulting lines -- for a
+ * section like §4.4 (80 pages) that showed roughly one page and called it
+ * done. The API was never the bug: `fetchSection` now takes no page bounds
+ * and returns every `ReadingPage` in the section, and every one of them is
+ * rendered. See client.ts's `fetchSection` for the removed parameters.
+ *
+ * 80 pages of a section is rendered as one continuous scroll, not paginated
+ * or virtualised: each `ReadingPage` is `<ManualBlocks>` over already-parsed
+ * blocks (no images, no heavy markup), so a full section is a few thousand
+ * plain DOM nodes at most -- well within what a mobile browser handles, and
+ * it keeps the page rail's scroll-progress readout and native find-in-page
+ * both trivially correct. Pagination would need its own "jump to page N"
+ * affordance to satisfy "the reader must be able to reach the last page";
+ * a single scroll already does that for free.
+ */
 export function TocBrowser() {
   const [nodes, setNodes] = useState<TocNode[]>([]);
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const [pages, setPages] = useState<PageText[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [openNode, setOpenNode] = useState<TocNode | null>(null);
+  const [section, setSection] = useState<SectionState>({ status: "loading" });
+  const [progress, setProgress] = useState(0);
+  const docRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     void fetchToc()
@@ -16,43 +43,136 @@ export function TocBrowser() {
   }, []);
 
   useEffect(() => {
-    const node = openIndex === null ? null : nodes[openIndex];
-    if (!node?.section) {
-      setPages([]);
-      return;
-    }
-    void fetchSection(node.section, 1, Math.min(4, node.pdf_page_to - node.pdf_page_from + 1)).then(setPages);
-  }, [openIndex, nodes]);
+    if (!openNode?.section) return;
+    const section = openNode.section;
+    let cancelled = false;
+    setSection({ status: "loading" });
+    void fetchSection(section)
+      .then((pages) => {
+        if (!cancelled) setSection({ status: "ready", pages });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setSection({ status: "error", detail: err instanceof Error ? err.message : String(err) });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openNode]);
+
+  useEffect(() => {
+    if (!openNode) return;
+    setProgress(0);
+    docRef.current?.scrollTo(0, 0);
+    backRef.current?.focus();
+  }, [openNode]);
+
+  function handleScroll() {
+    const el = docRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    setProgress(max > 0 ? Math.min(1, Math.max(0, el.scrollTop / max)) : 1);
+  }
 
   if (loadError) {
     return <p className="turn-error toc-error">Couldn't load the manual index: {loadError}</p>;
   }
 
+  if (openNode) {
+    // While the pages are loading, the header's page count/revision fall
+    // back to what the contents list already knew, so it never flashes
+    // empty.
+    const firstPage = section.status === "ready" ? section.pages[0] : undefined;
+    const totalPages = firstPage?.section_total ?? openNode.pages;
+    const revision = firstPage?.revision ?? null;
+
+    return (
+      <div className="reader">
+        <header className="reader-head">
+          <button ref={backRef} type="button" className="reader-back" onClick={() => setOpenNode(null)}>
+            &lsaquo; {openNode.part}
+          </button>
+          <h3 className="reader-title">{openNode.title ?? openNode.section}</h3>
+          <p className="reader-meta">
+            <span>&sect;{openNode.section}</span>
+            <span aria-hidden="true">&middot;</span>
+            <span>{totalPages} pages</span>
+            {revision && (
+              <>
+                <span aria-hidden="true">&middot;</span>
+                <span>{revision}</span>
+              </>
+            )}
+          </p>
+          <div
+            className="reader-rail"
+            role="progressbar"
+            aria-label="Reading progress"
+            aria-valuenow={Math.round(progress * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <i style={{ width: `${progress * 100}%` }} />
+          </div>
+        </header>
+
+        <div className="reader-doc" ref={docRef} onScroll={handleScroll}>
+          {section.status === "loading" && <p className="reader-note">Loading…</p>}
+          {section.status === "error" && (
+            <p className="turn-error reader-note">Couldn't load this section: {section.detail}</p>
+          )}
+          {section.status === "ready" &&
+            section.pages.map((page) => (
+              <section
+                key={page.pdf_page}
+                aria-label={`Page ${page.page_in_section} of ${page.section_total}`}
+              >
+                <div className="reader-pb">
+                  <span>
+                    PAGE {page.page_in_section} OF {page.section_total}
+                  </span>
+                  <i aria-hidden="true" />
+                </div>
+                {page.empty ? (
+                  <p className="reader-blank">No text on this page.</p>
+                ) : (
+                  <ManualBlocks blocks={page.blocks} />
+                )}
+              </section>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="toc">
       {nodes.map((n, i) => {
-        const open = openIndex === i;
-        return (
-          <div key={`${n.part}-${n.section ?? i}`} className="toc-row">
-            <button
-              type="button"
-              className="toc-open"
-              aria-expanded={open}
-              onClick={() => setOpenIndex(open ? null : i)}
-            >
-              <span className="toc-id">{n.section ?? n.part}</span>
+        const key = `${n.part}-${n.section ?? i}`;
+        if (!n.section) {
+          // Part-level dividers and unsectioned front matter have no
+          // section id to read through GET /api/section/{section}, so they
+          // aren't openable -- shown for context, not as a dead button that
+          // would otherwise sit forever on "Loading…".
+          return (
+            <div key={key} className="toc-row toc-row-static">
+              <span className="toc-id">{n.part}</span>
               <span className="toc-title">{n.title ?? n.part}</span>
               <span className="toc-pages">{n.pages} pp</span>
+            </div>
+          );
+        }
+        return (
+          <div key={key} className="toc-row">
+            <button type="button" className="toc-open" onClick={() => setOpenNode(n)}>
+              <span className="toc-id">{n.section}</span>
+              <span className="toc-title">{n.title ?? n.part}</span>
+              <span className="toc-pages">{n.pages} pp</span>
+              <span className="toc-chevron" aria-hidden="true">
+                &rsaquo;
+              </span>
             </button>
-            {open && (
-              // See web/src/lib/manualText.ts -- render-time-only PUA glyph
-              // substitution, never applied to the underlying PageText.
-              <pre className="toc-preview">
-                {pages.length > 0
-                  ? displayManualText(pages.flatMap((p) => p.numbered_lines).slice(0, 40).join("\n"))
-                  : "Loading…"}
-              </pre>
-            )}
           </div>
         );
       })}

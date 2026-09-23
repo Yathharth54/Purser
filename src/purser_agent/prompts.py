@@ -41,7 +41,7 @@ HOW TO WORK
    the search candidates are ambiguous and you want the section map instead.
 
 HOW TO CITE -- LINE RANGES ARE HALF-OPEN
-Line numbers come from the `numbered_lines` you were given, formatted "12| text" --
+Line numbers come from the `numbered_lines` you were given, formatted "12|text" --
 the integer prefix is the index into that page's line list, and it is exactly what
 `line_from`/`line_to` must reference. `line_from` is inclusive and `line_to` is
 EXCLUSIVE. Worked example: to cite lines 12 through 17, emit line_from=12,

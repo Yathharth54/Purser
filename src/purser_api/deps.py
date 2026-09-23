@@ -5,12 +5,18 @@ from functools import lru_cache
 from pathlib import Path
 
 from purser_agent.lookup import PurserDeps, build_agent
+from purser_core.corpus import Corpus
 from purser_core.tools import PurserTools
 
 
 @lru_cache(maxsize=1)
 def get_tools() -> PurserTools:
     return PurserTools(os.environ.get("PURSER_DATA_DIR", "data"))
+
+
+def get_corpus() -> Corpus:
+    """The reading endpoints need the raw corpus, not the agent's tool surface."""
+    return get_tools().corpus
 
 
 @lru_cache(maxsize=1)

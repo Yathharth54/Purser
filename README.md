@@ -9,6 +9,54 @@ Manual (`ifly.SEP`, Issue IX Rev 04). It finds the page; your eyes stay the auth
 
 Design spec: [`docs/superpowers/specs/2026-09-22-purser-design.md`](docs/superpowers/specs/2026-09-22-purser-design.md)
 
+## Design
+
+Built for a working flight attendant reading one-handed in a dim cabin, so the two
+themes are not a light/dark toggle so much as two reading conditions: **day** (a warm
+ivory ground, for a briefing room) and **cabin** (navy, for a dark aircraft). Tokens live
+in `web/src/styles/tokens.css`.
+
+**Palette** — a warm night sky with a single narrow gold accent:
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--navy-900` / `--navy-860` / `--navy-820` | `#090f21` / `#0c1426` / `#111a33` | cabin ground, chrome, raised surfaces |
+| `--sky-top` / `--sky-mid` / `--dawn` | `#0c1f3a` / `#1a3053` / `#fccc8a` | the brand artwork's gradient (icons, banner) |
+| `--ivory` | `#f6efe3` | day ground / cabin text |
+| `--gold` / `--gold-ink` | `#dcc08c` / `#7a5f21` | the one accent — see the tripwire below |
+
+**The gold tripwire.** Gold marks the manual and the one primary action only: the
+citation label, the manual's edge, the active tab, focus rings and the send control —
+nowhere else. `--gold-ink` exists because raw `--gold` fails contrast on ivory; it is
+gold's day-mode voice, not a second colour. If gold ever lands on a secondary button or
+a background wash, the system has collapsed into a generic dark theme with an accent
+colour — that regression is called out explicitly in the token file's own header comment.
+
+**Three typefaces, three jobs:**
+
+| Typeface | Role | Why |
+| --- | --- | --- |
+| **Cormorant Garamond** | Display — headings, the wordmark | A book serif. The manual is a document, not a dashboard, and this says so before a word is read. |
+| **Atkinson Hyperlegible** | UI — body text, chat, controls | Designed by the Braille Institute for legibility at speed and in poor conditions — exactly the dim-cabin, one-handed reading this app is built for. |
+| **IBM Plex Mono** | Citation text, tables | Manual quotes and two-column tables are rendered verbatim; monospace is what preserves a table's columns as the information they are, and signals "this is the source, not prose." |
+
+**Regenerating the icons and banner.** Both are derived from the AI-generated brand
+artwork committed in `assets/` and must be rebuilt from that source rather than
+hand-edited:
+
+```sh
+python scripts/make_icons.py          # crops the logomark -> web/public/icons/*.png
+python scripts/make_readme_banner.py  # crops + widens the hero -> docs/banner.png
+```
+
+`make_icons.py` cuts the logomark out of the hero art with padding tuned to survive
+Android's circular maskable-icon crop, and additionally renders a full-bleed
+`maskable-512.png`. `make_readme_banner.py` crops the 16:9 hero to a 5:1 banner strip and
+paints out the subtitle band — the source artwork's subtitle reads "A CITED RETRIEVAL
+AGENT **OVEN** THE AIRBUS A320/321" (a typo in the generated image, not a repo typo), so
+it is removed by reconstructing the sky gradient behind it rather than shipped on the
+front page of this README.
+
 ## Layers
 
 ```
@@ -89,6 +137,11 @@ docker compose up -d --build
 
 Ingest is pure parsing — no LLM, no network. Structure comes from the footer every page
 prints for itself, so a reissue with the same footer grammar needs no code change.
+
+**Use the `purser ingest` console script above, not `python -m purser_ingest.cli`.** The
+latter is a silent no-op — `cli.py` has no `if __name__ == "__main__"` guard, so the
+module runs its imports, prints nothing, and exits 0 without ingesting anything. It looks
+like it worked; it did not.
 
 ## Layout
 

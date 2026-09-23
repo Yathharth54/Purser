@@ -5,6 +5,27 @@
  */
 
 /**
+ * One structural unit of manual text, recovered from the text layer (Task
+ * 6/7's parser).
+ *
+ * `text` is verbatim for every kind EXCEPT `para`, `bullet` and `note`,
+ * where lines the PDF hard-wrapped are rejoined with a single space --
+ * that restores the sentence the author wrote. `table` keeps its own
+ * newlines and leading spaces, because its columns ARE the information --
+ * never reflow it. `bullet`'s glyph has already been stripped server-side;
+ * `level` carries its nesting depth (headings don't nest by level).
+ *
+ * Render every block's `text` through `displayManualText()`
+ * (`web/src/lib/manualText.ts`) so PUA glyphs the source PDF's symbol
+ * fonts left behind don't show up as tofu boxes.
+ */
+export interface Block {
+  kind: "heading" | "subheading" | "para" | "bullet" | "note" | "caption" | "table";
+  level: number;
+  text: string;
+}
+
+/**
  * A cited block of manual text.
  *
  * `text` is verbatim manual text spliced server-side, with leading
@@ -14,6 +35,11 @@
  *
  * `label` is prebuilt (e.g. "PART FOUR §4.4 p.46") -- render it, don't
  * rebuild it client-side.
+ *
+ * `blocks` is the SAME text, already parsed into `Block`s, for the nicer
+ * default render via `<ManualBlocks>`. `text` stays the source of truth --
+ * if the two ever disagree about the words, `text` is right. A resolved
+ * citation's `blocks` is never empty.
  */
 export interface Citation {
   pdf_page: number;
@@ -24,6 +50,7 @@ export interface Citation {
   revision: string | null;
   effective: string; // ISO date
   text: string;
+  blocks: Block[];
   label: string;
 }
 
@@ -36,13 +63,27 @@ export interface TocNode {
   pages: number;
 }
 
-export interface PageText {
+/**
+ * GET /api/section/{section} element -- one page of the manual, shaped for
+ * a person reading it rather than for the agent (the agent's own citable
+ * view of a page, numbered_lines and all, is server-side only -- nothing
+ * on this client needs it).
+ *
+ * `empty` is true for the ~8 pages of the manual that carry no text after
+ * de-chroming -- `blocks` is `[]` for those, and they're still returned in
+ * position (not skipped), so page numbers stay aligned with the paper
+ * manual a reader is cross-checking.
+ */
+export interface ReadingPage {
   pdf_page: number;
-  part: string;
+  page_in_section: number;
+  section_total: number;
   section: string | null;
   section_title: string | null;
-  page_in_section: number;
-  numbered_lines: string[];
+  revision: string | null;
+  effective: string; // ISO date
+  blocks: Block[];
+  empty: boolean;
 }
 
 /** Names emitted on the `tool` SSE event -- one retrieval call each. */

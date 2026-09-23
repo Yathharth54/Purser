@@ -4,6 +4,7 @@ import logging
 
 from purser_agent.schemas import CiteRef
 from purser_api.schemas import Citation
+from purser_core.blocks import parse_blocks
 from purser_core.corpus import Corpus
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,23 @@ def resolve(corpus: Corpus, ref: CiteRef) -> Citation | None:
         log.warning("citation dropped: empty range %s:%s on p%s", lo, hi, ref.pdf_page)
         return None
 
+    chrome = set(page.chrome)
+    while lo < hi and (lo in chrome or not page.lines[lo].strip()):
+        lo += 1
+    while hi > lo and (hi - 1 in chrome or not page.lines[hi - 1].strip()):
+        hi -= 1
+    if lo >= hi:
+        log.warning("citation dropped: pure furniture %s:%s on p%s", lo, hi, ref.pdf_page)
+        return None
+
+    # `parse_blocks` treats its `chrome` argument as indices INTO the `lines`
+    # list it is handed. We are handing it a SLICE (`page.lines[lo:hi]`), so
+    # `page.chrome` -- which is page-absolute -- must be rebased onto that
+    # slice's own indexing, or interior furniture is mis-skipped (or, worse,
+    # real procedure text is skipped once lo > 0). `blocks` is only how
+    # `text` is drawn; `text` itself stays the untouched, byte-exact splice.
+    blocks = parse_blocks(page.lines[lo:hi], [c - lo for c in page.chrome if lo <= c < hi])
+
     return Citation(
         pdf_page=page.pdf_page,
         part=page.part,
@@ -37,6 +55,7 @@ def resolve(corpus: Corpus, ref: CiteRef) -> Citation | None:
         revision=page.revision,
         effective=page.effective,
         text="\n".join(page.lines[lo:hi]),
+        blocks=blocks,
     )
 
 

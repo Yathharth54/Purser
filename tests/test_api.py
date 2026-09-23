@@ -118,10 +118,27 @@ def test_toc_lists_sections(client):
     assert len([n for n in body if n["section"]]) == 37
 
 
-def test_section_returns_verbatim_pages(client):
+def test_section_returns_readable_pages(client):
+    r = client.get("/api/section/4.2")
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 8
+    assert all("blocks" in p and "numbered_lines" not in p for p in body)
+    kinds = {b["kind"] for p in body for b in p["blocks"]}
+    assert "heading" in kinds and "bullet" in kinds
+
+
+def test_section_reader_slices_by_page_bounds(client):
     body = client.get("/api/section/4.4", params={"page_from": 1, "page_to": 2}).json()
     assert len(body) == 2
     assert body[0]["page_in_section"] == 1
+
+
+def test_section_reader_returns_every_page_of_a_long_section(client):
+    """Section 4.4 is 80 pages. The old UI capped the reader at 4 pages and
+    40 lines -- this pins that the endpoint itself carries no such cap."""
+    body = client.get("/api/section/4.4").json()
+    assert len(body) == 80
 
 
 def test_unknown_section_404s(client):
@@ -201,7 +218,7 @@ def test_chat_streams_answer_then_resolved_citations(client, monkeypatch):
 
     answer = Answer(
         body="Evacuate via the nearest usable exit.",
-        refs=[CiteRef(pdf_page=600, line_from=0, line_to=2)],
+        refs=[CiteRef(pdf_page=600, line_from=0, line_to=15)],
         not_in_manual=False,
     )
     monkeypatch.setattr(chat_mod, "get_agent", lambda: _FakeAgent(answer))
@@ -286,7 +303,7 @@ def test_chat_drops_unresolvable_refs_but_keeps_good_ones(client, monkeypatch):
     answer = Answer(
         body="Two things.",
         refs=[
-            CiteRef(pdf_page=600, line_from=0, line_to=2),
+            CiteRef(pdf_page=600, line_from=0, line_to=15),
             CiteRef(pdf_page=1, line_from=900, line_to=901),
         ],
     )
@@ -480,7 +497,7 @@ def test_chat_works_against_a_real_pydantic_ai_agent(client, monkeypatch):
 
     valid_answer_args = {
         "body": "Evacuate via the nearest usable exit.",
-        "refs": [{"pdf_page": 600, "line_from": 2, "line_to": 5}],
+        "refs": [{"pdf_page": 600, "line_from": 12, "line_to": 15}],
         "not_in_manual": False,
     }
     test_model = TestModel(custom_output_args=valid_answer_args)

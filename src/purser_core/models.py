@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, model_validator
 
@@ -51,7 +52,33 @@ class Page(BaseModel):
     effective: date
     revision: str | None
     lines: list[str]  # verbatim, 0-indexed — the citation substrate
+    chrome: list[int] = []  # indices into `lines` that are page furniture
     text: str  # lines joined, for FTS5 and embedding
+
+    def content_lines(self) -> list[tuple[int, str]]:
+        """(original index, text) for every non-blank, non-furniture line.
+
+        The index is deliberately the ORIGINAL one. It is what CiteRef.line_from
+        and line_to mean, and renumbering here would break every citation while
+        still producing text that reads correctly.
+        """
+        skip = set(self.chrome)
+        return [(i, s) for i, s in enumerate(self.lines) if s.strip() and i not in skip]
+
+
+class Block(BaseModel):
+    """One structural unit of the manual, recovered from the text layer.
+
+    `text` is verbatim for every kind EXCEPT `para`, `bullet` and `note`, where
+    lines the PDF hard-wrapped are rejoined with a single space. That restores
+    the sentence the author wrote; the line break at column 90 was a layout
+    artifact, not meaning. `table` keeps its own newlines and leading spaces,
+    because its columns ARE the information.
+    """
+
+    kind: Literal["heading", "subheading", "para", "bullet", "note", "caption", "table"]
+    level: int = 0  # heading depth, or bullet nesting
+    text: str
 
 
 class PageText(BaseModel):
@@ -62,7 +89,21 @@ class PageText(BaseModel):
     section: str | None
     section_title: str | None
     page_in_section: int
-    numbered_lines: list[str]  # "12| CABIN CREW SHALL..." — index is the citable one
+    numbered_lines: list[str]  # "12|CABIN CREW SHALL..." — index is the citable one
+
+
+class ReadingPage(BaseModel):
+    """One page of the manual, shaped for a person rather than the model."""
+
+    pdf_page: int
+    page_in_section: int
+    section_total: int
+    section: str | None
+    section_title: str | None
+    revision: str | None
+    effective: date
+    blocks: list[Block]
+    empty: bool  # True for the 8 pages that carry no text at all
 
 
 class SectionHit(BaseModel):

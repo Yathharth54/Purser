@@ -121,7 +121,10 @@ def test_k_controls_number_of_sections_not_pages(tools, monkeypatch):
 def test_read_section_returns_numbered_lines_in_order(tools):
     pages = tools.read_section("4.4", page_from=30, page_to=32)
     assert [p.page_in_section for p in pages] == [30, 31, 32]
-    assert pages[0].numbered_lines[0].startswith("0|")
+    # numbered_lines are ordered and start with a valid index (not necessarily 0,
+    # since furniture lines are dropped)
+    assert pages[0].numbered_lines
+    assert re.match(r"^\d+\|", pages[0].numbered_lines[0])
 
 
 def test_read_section_clamps_out_of_range_requests(tools):
@@ -205,22 +208,52 @@ def test_lookup_term_unknown_returns_none(tools):
 
 
 def test_numbered_lines_index_matches_page_lines_index_exactly(tools):
+    """Each numbered_line's index addresses the correct line in Page.lines.
+
+    After the furniture-removal change, numbered_lines is shorter than page.lines,
+    but each index still addresses the original line. The indices are NOT renumbered.
+    """
     pdf_page = 600
     page = tools.corpus.page(pdf_page)
     (page_text,) = tools.read_page(pdf_page)
 
-    assert len(page_text.numbered_lines) == len(page.lines)
+    # numbered_lines now contains only content lines, so it's shorter.
+    assert len(page_text.numbered_lines) == len(page.content_lines())
 
-    for entry, expected_text in zip(page_text.numbered_lines, page.lines, strict=True):
-        match = re.match(r"^(\d+)\| (.*)$", entry, re.DOTALL)
+    for entry, (expected_line_no, expected_text) in zip(
+        page_text.numbered_lines, page.content_lines(), strict=True
+    ):
+        match = re.match(r"^(\d+)\|(.*)$", entry, re.DOTALL)
         assert match, f"malformed numbered_line entry: {entry!r}"
         line_no, text = int(match.group(1)), match.group(2)
+        # The printed index must match the original index from content_lines()
+        assert line_no == expected_line_no
         assert text == expected_text
         assert page.lines[line_no] == expected_text, (
-            f"numbered_lines index {line_no} does not address the same text in "
-            f"Page.lines (expected index {page.lines.index(expected_text)})"
+            f"numbered_lines index {line_no} does not address the same text in Page.lines"
         )
 
-    # And directly: the printed number must equal the enumerate() index, start=0.
-    printed_numbers = [int(re.match(r"(\d+)\|", e).group(1)) for e in page_text.numbered_lines]
-    assert printed_numbers == list(range(len(page.lines)))
+
+def test_numbered_lines_omit_furniture_but_keep_original_numbers(tools):
+    """The agent should never see letterhead, and never cite a shifted index.
+
+    Before this, ~51% of every page handed to the model was blank lines and
+    repeated boilerplate. It cost context and it produced citations pointing at
+    'InterGlobe Aviation Limited'.
+    """
+    [pt] = tools.read_page(600)
+    assert pt.numbered_lines, "page 600 has content"
+    assert not any("InterGlobe" in s for s in pt.numbered_lines)
+    assert not any("NOT A CONTROLLED COPY" in s for s in pt.numbered_lines)
+    assert not any("Page 1 of" in s for s in pt.numbered_lines)
+
+    page = tools.corpus.page(600)
+    for entry in pt.numbered_lines:
+        num, _, text = entry.partition("|")
+        assert page.lines[int(num)] == text
+
+
+def test_a_page_of_pure_furniture_yields_no_lines(tools):
+    # pdf_page 314 is one of exactly 8 pages that carry no content at all.
+    [pt] = tools.read_page(314)
+    assert pt.numbered_lines == []

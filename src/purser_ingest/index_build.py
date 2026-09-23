@@ -20,6 +20,7 @@ CREATE TABLE pages (
     effective       TEXT NOT NULL,
     revision        TEXT,
     lines           TEXT NOT NULL,   -- JSON array, 0-indexed
+    chrome          TEXT NOT NULL DEFAULT '[]',  -- JSON array of indices into `lines`
     text            TEXT NOT NULL
 );
 
@@ -40,7 +41,7 @@ def build_index(pages: list[Page], db_path: Path) -> None:
     try:
         con.executescript(_SCHEMA)
         con.executemany(
-            "INSERT INTO pages VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO pages VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             [
                 (
                     p.pdf_page,
@@ -52,6 +53,7 @@ def build_index(pages: list[Page], db_path: Path) -> None:
                     p.effective.isoformat(),
                     p.revision,
                     json.dumps(p.lines),
+                    json.dumps(p.chrome),
                     p.text,
                 )
                 for p in pages

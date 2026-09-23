@@ -5,8 +5,9 @@ import subprocess
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
-from purser_api.deps import get_pdf_path, get_tools
-from purser_core.models import PageText, TocNode
+from purser_api.deps import get_corpus, get_pdf_path, get_tools
+from purser_core.models import ReadingPage, TocNode
+from purser_core.reading import clamp_by_page_in_section, reading_pages
 from purser_ingest.render import render_page
 
 router = APIRouter(prefix="/api", tags=["manual"])
@@ -24,16 +25,23 @@ def toc() -> list[TocNode]:
     return get_tools().toc()
 
 
-@router.get("/section/{section}", response_model=list[PageText])
+@router.get("/section/{section}", response_model=list[ReadingPage])
 def section(
     section: str,
     page_from: int = Query(1, ge=1),
     page_to: int | None = Query(None, ge=1),
-) -> list[PageText]:
-    pages = get_tools().read_section(section, page_from=page_from, page_to=page_to)
+) -> list[ReadingPage]:
+    """The section as a person reads it -- whole pages, parsed into blocks.
+
+    Clamping is shared with `PurserTools.read_section` via
+    `clamp_by_page_in_section` -- see its docstring for the clamp invariant
+    (several sections open at page_in_section 3, not 1) so this reader and
+    the agent's own view of a section can't silently drift apart on it.
+    """
+    pages = reading_pages(get_corpus(), section)
     if not pages:
         raise HTTPException(status_code=404, detail=f"no such section: {section}")
-    return pages
+    return clamp_by_page_in_section(pages, page_from, page_to)
 
 
 @router.get("/page/{pdf_page}/image")

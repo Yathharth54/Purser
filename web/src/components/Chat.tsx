@@ -13,13 +13,23 @@ interface Turn {
   /** Transient retrieval progress, replaced in place -- never appended. */
   toolStatus: string | null;
   errorText: string | null;
+  /** Wall-clock time the turn was created, formatted once at creation.
+   *  Approximate (not the moment the answer actually finished streaming),
+   *  which is exactly what every other chat surface shows too. */
+  time: string;
 }
 
 interface Props {
   onOpenCitation: (c: Citation) => void;
 }
 
-const STARTERS = ["Ditching drill", "Slide raft detach", "Infant restraint"];
+// Per the approved mockup's empty state (four chips, this exact wording and
+// order) -- not the plan's earlier three-chip sketch.
+const STARTERS = ["Ditching drill", "Slide raft detach", "Infant restraint", "Smoke in the cabin"];
+
+function formatClock(date: Date): string {
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
 
 /** Best-effort human label for a `tool` event. Args are a loosely-typed
  *  bag (`Record<string, unknown>`) so this reads defensively. */
@@ -92,8 +102,24 @@ export function Chat({ onOpenCitation }: Props) {
     setBusy(true);
     setTurns((t) => [
       ...t,
-      { role: "user", body: trimmed, citations: [], settled: true, toolStatus: null, errorText: null },
-      { role: "assistant", body: "", citations: [], settled: false, toolStatus: null, errorText: null },
+      {
+        role: "user",
+        body: trimmed,
+        citations: [],
+        settled: true,
+        toolStatus: null,
+        errorText: null,
+        time: formatClock(new Date()),
+      },
+      {
+        role: "assistant",
+        body: "",
+        citations: [],
+        settled: false,
+        toolStatus: null,
+        errorText: null,
+        time: formatClock(new Date()),
+      },
     ]);
 
     const patchLast = (fn: (t: Turn) => Turn) =>
@@ -126,7 +152,10 @@ export function Chat({ onOpenCitation }: Props) {
       <div className="turns" ref={scrollRef}>
         {turns.length === 0 && (
           <div className="empty">
-            <p>Ask about a procedure.</p>
+            <h2 className="empty-head">Ask about a procedure</h2>
+            <p className="empty-sub">
+              Search the Safety and Emergency Procedures Manual, cited to the page.
+            </p>
             <div className="starters">
               {STARTERS.map((s) => (
                 <button key={s} type="button" className="starter" onClick={() => void send(s)}>
@@ -137,35 +166,55 @@ export function Chat({ onOpenCitation }: Props) {
           </div>
         )}
 
-        {turns.map((turn, i) => (
-          <article key={i} className={`turn turn-${turn.role}`}>
-            {turn.role === "assistant" && turn.toolStatus && (
-              <p className="tool-status">{turn.toolStatus}</p>
-            )}
+        {turns.map((turn, i) => {
+          if (turn.role === "user") {
+            return (
+              <article key={i} className="me">
+                {turn.body}
+              </article>
+            );
+          }
 
-            {turn.body && <p className="turn-body">{turn.body}</p>}
+          // Assistant turn: the thinking chip, the answer bubble, its
+          // citations and the timestamp are one visual unit beside the
+          // avatar -- never four floating fragments (see the mockup).
+          const thinking = !turn.body && !turn.settled;
+          const showStamp = !thinking;
 
-            {turn.role === "assistant" && !turn.body && !turn.toolStatus && !turn.errorText && (
-              <p className="turn-body turn-pending" aria-hidden="true">
-                …
-              </p>
-            )}
+          return (
+            <article key={i} className="turn">
+              <span className="avatar" aria-hidden="true">
+                <img src="/icons/icon-32.png" alt="" width={25} height={25} />
+              </span>
+              <div className="stack">
+                {thinking && (
+                  <div className="think">
+                    <i className="crescent" aria-hidden="true" />
+                    <span>{turn.toolStatus ?? "Thinking…"}</span>
+                  </div>
+                )}
 
-            {turn.citations.length > 0 && (
-              <div className="citations">
-                {turn.citations.map((c, j) => (
-                  <CitationChip key={j} citation={c} onOpen={onOpenCitation} />
-                ))}
+                {turn.body && <div className="bot">{turn.body}</div>}
+
+                {turn.citations.length > 0 && (
+                  <div className="citations">
+                    {turn.citations.map((c, j) => (
+                      <CitationChip key={j} citation={c} onOpen={onOpenCitation} />
+                    ))}
+                  </div>
+                )}
+
+                {turn.settled && turn.citations.length === 0 && !turn.errorText && (
+                  <p className="uncited">Not from the manual.</p>
+                )}
+
+                {turn.errorText && <p className="turn-error">{turn.errorText}</p>}
+
+                {showStamp && <span className="stamp">{turn.time}</span>}
               </div>
-            )}
-
-            {turn.role === "assistant" && turn.settled && turn.citations.length === 0 && !turn.errorText && (
-              <p className="uncited">Not from the manual.</p>
-            )}
-
-            {turn.errorText && <p className="turn-error">{turn.errorText}</p>}
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
       <form

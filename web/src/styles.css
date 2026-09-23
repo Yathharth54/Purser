@@ -3,30 +3,22 @@
  * src/styles/tokens.css and the layout in
  * .superpowers/sdd/2026-09-22-purser/design-plan.md.
  *
+ * Colour tokens live in tokens.css ONLY. This file must never declare its
+ * own :root colour variables -- it consumes --bg/--text/--dim/--chrome/etc.
+ * exactly as tokens.css defines them for the active [data-theme].
+ *
  * Rules this file exists to enforce:
- *  - --halo appears on citation rules ONLY. Never a button, link, heading,
- *    or focus ring.
- *  - No cards: no border-radius chrome, no box-shadows, no rounded
- *    containers. Buttons and inputs are sharp-edged.
- *  - Light mode ([data-theme="light"], the default) is the primary design.
- *    Cabin mode ([data-theme="cabin"]) is the dim-light reading mode -- it
- *    inverts to an --ink base with --paper text, not a generic dark theme.
- *  - The only orchestrated motion is the page drawer sliding up.
+ *  - The frosted chrome (header, segmented control, composer) follows the
+ *    approved mockup's depth system: --s1/--s2/--s3 paired with --hi as a
+ *    top highlight, --inset for recessed tracks/fields. Gradients are a
+ *    marketing-surface device only and never sit behind app chrome.
+ *  - Day ([data-theme="day"], the default) is the primary design. Cabin
+ *    ([data-theme="cabin"]) is the dim-light reading mode against a navy
+ *    ground, not a generic dark theme.
+ *  - Orchestrated motion is deliberately rare: the page drawer sliding up,
+ *    and the segmented control's thumb sliding between Ask and Manual.
+ *    Both respect prefers-reduced-motion via the global rule below.
  */
-
-:root {
-  --bg: var(--paper);
-  --fg: var(--ink);
-  --surface: #e6ebee; /* raised surface in light mode: composer, drawer */
-  --rule: rgba(14, 24, 38, 0.14); /* quiet structural line, not a "hairline rule" grid */
-}
-
-:root[data-theme="cabin"] {
-  --bg: var(--ink);
-  --fg: var(--paper);
-  --surface: var(--deck);
-  --rule: rgba(242, 245, 247, 0.16);
-}
 
 * {
   min-width: 0;
@@ -40,7 +32,7 @@ body,
 
 body {
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
   overscroll-behavior: none;
 }
 
@@ -58,7 +50,7 @@ button {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--fg);
+  outline: 2px solid var(--text);
   outline-offset: 3px;
 }
 
@@ -76,52 +68,135 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
 }
+
+/* ---------- Header chrome: solid, frosted, never gradient ---------- */
 
 .app-head {
   flex: none;
+  position: relative;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom: 1px solid var(--hair);
+  padding: calc(env(safe-area-inset-top, 0px) + 13px) 16px 12px;
+}
+
+.head-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 12px;
-  border-bottom: 1px solid var(--rule);
+  gap: 10px;
 }
 
-.app-head h1 {
-  font-size: var(--text-body-lg);
-  font-weight: 700;
-  margin: 0;
-  flex: none;
-}
-
-.tabs {
-  display: flex;
-  gap: 4px;
+.head-spacer {
   flex: 1;
 }
 
-.tabs button {
-  padding: 6px 2px;
-  margin-right: 16px;
-  font-size: var(--text-body-sm);
-  color: var(--dim);
-  border-bottom: 2px solid transparent;
+/* Wordmark.tsx deliberately carries no layout -- this is that layout. */
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-width: 0;
 }
 
-.tabs button.on {
-  color: var(--fg);
-  font-weight: 700;
-  border-bottom-color: var(--fg);
+.wordmark img {
+  display: block;
+  flex: none;
+  border-radius: 7px;
+  box-shadow: var(--s1);
 }
 
+.wordmark-text {
+  font-family: var(--ff-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;
+  line-height: 1;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A 44px hit target wrapping the 32px chip the mockup actually shows. */
 .theme-toggle {
   flex: none;
-  font-size: var(--text-meta);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: none;
+}
+
+.theme-toggle-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  line-height: 1;
   color: var(--dim);
-  border: 1px solid var(--rule);
-  padding: 6px 10px;
-  min-height: 32px;
+  background: var(--raised);
+  box-shadow: var(--s1), var(--hi);
+}
+
+/* ---------- Segmented control: a real tablist, not a link menu ---------- */
+
+.seg {
+  position: relative;
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--sunken);
+  border-radius: 12px;
+  padding: 3px;
+  box-shadow: var(--inset);
+}
+
+.seg::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  background: var(--raised);
+  border-radius: 9px;
+  box-shadow: var(--s2), var(--hi);
+  transition: transform 0.22s ease;
+}
+
+.seg.seg-manual::before {
+  transform: translateX(100%);
+}
+
+.seg button {
+  position: relative;
+  z-index: 1;
+  /* padding matches the mockup's .seg span (7px 0) exactly; min-height is
+     the only addition, so the 44px touch-target floor is met without
+     changing the visual padding the mockup specifies. */
+  min-height: 44px;
+  padding: 7px 0;
+  font-size: 13.5px;
+  color: var(--dim);
+  background: none;
+  border: none;
+  border-radius: 9px;
+  text-align: center;
+}
+
+.seg button.on {
+  color: var(--text);
+  font-weight: 700;
 }
 
 main {
@@ -132,7 +207,12 @@ main {
   overflow: hidden;
 }
 
-/* ---------- Chat ---------- */
+/* ---------- Chat: real bubbles, grouped turns ----------
+   Follows the approved mockup's transcript (docs/design/purser-v2-mockup.html)
+   exactly -- the mockup wins wherever this comment and it would otherwise
+   disagree. She must be able to tell what the manual says from what the
+   assistant says without effort: that is a difference of material here
+   (bubble vs. paper), not just typeface. */
 
 .chat {
   flex: 1;
@@ -146,132 +226,342 @@ main {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 20px 16px;
+  padding: 14px 16px 10px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 7px;
 }
 
+/* ---------- Empty state ---------- */
+
 .empty {
+  padding-top: 12px;
+}
+
+.empty-head {
+  font-family: var(--ff-display);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.empty-sub {
+  margin: 0;
   color: var(--dim);
-  font-size: var(--text-body-lg);
-  padding-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 42ch;
 }
 
 .starters {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .starter {
-  font-size: var(--text-body-sm);
-  color: var(--fg);
-  border: 1px solid var(--rule);
-  padding: 10px 14px;
   min-height: 44px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--raised);
+  border-radius: 14px;
+  box-shadow: var(--s2), var(--hi);
   text-align: left;
 }
+
+/* ---------- Her bubble ---------- */
+
+.me {
+  align-self: flex-end;
+  max-width: 80%;
+  background: var(--me);
+  color: var(--text);
+  padding: 10px 15px;
+  border-radius: 20px 20px 6px 20px;
+  font-size: 14.5px;
+  line-height: 1.48;
+  white-space: pre-wrap;
+  box-shadow: var(--s2), var(--hi);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- The assistant's turn: avatar + one grouped stack ----------
+   The thinking chip, answer bubble, citations and timestamp are one visual
+   unit beside the avatar -- never four floating fragments. */
 
 .turn {
-  max-width: 100%;
+  align-self: flex-start;
+  max-width: 93%;
+  display: flex;
+  gap: 9px;
+  margin-top: 9px;
 }
 
-.turn-user {
-  align-self: flex-end;
-  max-width: 85%;
-  text-align: right;
+.avatar {
+  width: 25px;
+  height: 25px;
+  flex: none;
+  margin-top: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--s1);
 }
 
-.turn-user .turn-body {
-  color: var(--dim);
-  font-size: var(--text-body-sm);
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.turn-assistant {
-  align-self: stretch;
-  text-align: left;
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
-.turn-body {
+.bot {
   margin: 0;
-  font-size: var(--text-body-lg);
-  line-height: 1.55;
+  background: var(--raised);
+  padding: 12px 15px;
+  border-radius: 6px 20px 20px 20px;
+  font-size: 14.5px;
+  line-height: 1.62;
   white-space: pre-wrap;
-}
-
-/* A readable measure for the assistant's own prose -- unconstrained, a
-   laptop-width answer runs the full viewport (~1450px), which is what
-   recurrent-training reading on a laptop actually hits. This applies to
-   the assistant's voice only: citation/manual mono text is deliberately
-   left unconstrained here, since its width is governed by the manual's
-   own layout (procedure-table columns), not by prose typesetting. */
-.turn-assistant .turn-body {
+  box-shadow: var(--s2), var(--hi);
+  /* A readable measure for the assistant's own prose -- unconstrained, a
+     laptop-width answer runs the full viewport, which is what
+     recurrent-training reading on a laptop actually hits. */
   max-width: 70ch;
+  overflow-wrap: anywhere;
 }
 
-.turn-pending {
+.stamp {
+  align-self: flex-end;
+  margin-top: -3px;
+  font-size: 10.5px;
   color: var(--dim);
 }
 
-.tool-status {
-  margin: 0 0 8px;
+/* ---------- The thinking state ---------- */
+
+.think {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  align-self: flex-start;
+  font-size: 12.5px;
   color: var(--dim);
-  font-size: var(--text-meta);
+  background: var(--sunken);
+  border-radius: 99px;
+  padding: 7px 13px;
+  box-shadow: var(--inset);
 }
+
+.crescent {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: var(--gold);
+  border-right-color: var(--gold);
+  animation: purser-think-spin 1s linear infinite;
+}
+
+@keyframes purser-think-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crescent {
+    animation: none;
+    border-color: var(--gold) transparent;
+  }
+}
+
+/* ---------- The uncited case: normal, never an error ---------- */
 
 .uncited {
-  margin: 10px 0 0;
+  margin: 0;
+  font-size: 12.5px;
   color: var(--dim);
-  font-size: var(--text-meta);
+  font-style: italic;
+  padding-left: 2px;
 }
 
 .turn-error {
-  margin: 10px 0 0;
-  font-size: var(--text-body-sm);
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text);
 }
 
-/* ---------- Citations: the one bold element ---------- */
+/* ---------- Citations: the paper extract ---------- */
 
 .citations {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 14px;
+  gap: 10px;
 }
 
-.citation {
+/* the paper extract -- the most elevated thing in the app */
+.paper {
   display: block;
   width: 100%;
   text-align: left;
-  border-left: 3px solid var(--halo);
-  padding: 4px 0 4px 14px;
+  color: var(--paper-ink);
+  background: var(--paper);
+  border-radius: 13px;
+  border-left: 3px solid var(--gold);
+  overflow: hidden;
+  box-shadow: var(--s3), var(--hi);
 }
 
-.citation-label {
-  margin: 0 0 8px;
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
-  color: var(--fg);
+.paper-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 8px;
+  /* a dashed rule under the label -- it reads as a page torn out of
+     something, not a card with a divider. */
+  border-bottom: 1px dashed var(--rule);
 }
 
-.citation-text {
+.paper-label {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-mono);
-  line-height: 1.65;
-  white-space: pre-wrap;
-  overflow-x: auto;
-  color: var(--fg);
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
 }
 
-.citation-revision {
-  margin: 10px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
+.paper-open {
+  margin-left: auto;
+  font-size: 12px;
   color: var(--dim);
+}
+
+.paper-body {
+  padding: 10px 13px 8px;
+  overflow-wrap: anywhere;
+}
+
+.paper-rev {
+  margin: 0;
+  padding: 0 13px 10px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--dim);
+}
+
+/* ---------- Manual blocks: the formatted manual document ----------
+   Rendered by ManualBlocks.tsx from typed `Block`s (Task 6/7's parser),
+   used identically inside the citation "paper" card (Task 11) and the
+   section reader (Task 12) -- see the mockup's "Manual" demo section,
+   which is authoritative over the plan prose wherever the two disagree.
+   No outer color is set here beyond what each kind specifies explicitly;
+   .m-p/.m-li inherit their caller's ambient text color (--text on the app
+   background, --paper-ink inside a .paper card) exactly as the approved
+   mockup does. */
+
+.manual-blocks {
+  font-family: var(--ff-ui);
+}
+
+.m-h {
+  font-family: var(--ff-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 14px 0 7px;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+.m-h:first-child {
+  margin-top: 0;
+}
+
+.m-sh {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 12px 0 5px;
+  color: var(--text);
+}
+
+.m-p {
+  font-size: 13.5px;
+  line-height: 1.66;
+  margin: 0 0 9px;
+  max-width: 64ch; /* readable measure -- this is the fix for the wall of
+                       text the manual used to render as. */
+}
+
+.m-li {
+  display: flex;
+  gap: 9px;
+  margin: 0 0 7px;
+  /* --lv is the bullet's nesting depth, set inline by ManualBlocks.tsx --
+     the parser has already stripped the source glyph, so this component
+     draws its own marker and owns the indent. */
+  padding-left: calc(var(--lv, 0) * 15px);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.m-li i {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  margin-top: 8px;
+}
+
+.m-note {
+  font-size: 12.5px;
+  line-height: 1.56;
+  margin: 9px 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--sunken);
+  border-left: 2px solid var(--gold);
+  color: var(--dim);
+}
+
+.m-cap {
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  margin: 12px 0 5px;
+  letter-spacing: 0.04em;
+}
+
+.m-tbl {
+  background: var(--sunken);
+  border-radius: 9px;
+  padding: 10px 11px;
+  /* Never reflow a table: its column gaps pair a condition to the action
+     it requires. On a narrow phone this scrolls horizontally instead of
+     wrapping or silently clipping. */
+  overflow-x: auto;
+  margin: 0 0 11px;
+  box-shadow: var(--inset);
+}
+
+.m-tbl pre {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 9.5px;
+  line-height: 1.52;
+  color: var(--text);
+  white-space: pre;
 }
 
 /* ---------- Composer: pinned in the thumb zone ---------- */
@@ -282,46 +572,66 @@ main {
   align-items: center;
   gap: 10px;
   padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
-  border-top: 1px solid var(--rule);
-  background: var(--surface);
+  border-top: 1px solid var(--hair);
+  background: var(--chrome);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .composer input {
   flex: 1;
   min-width: 0;
-  background: var(--bg);
-  border: 1px solid var(--rule);
-  padding: 12px 14px;
+  background: var(--sunken);
+  border: none;
+  border-radius: 22px;
+  box-shadow: var(--inset);
+  padding: 11px 16px;
   font-size: 16px; /* >=16px avoids iOS Safari zoom-on-focus */
   min-height: 44px;
+}
+
+.composer input::placeholder {
+  color: var(--dim);
 }
 
 .composer input:disabled {
   opacity: 0.6;
 }
 
+/* The one primary action -- the single spot in the app gold is allowed to
+   fill a surface, per tokens.css's own brand note. Deliberately unchanged
+   between day and cabin: it is the app's one constant accent, not a
+   themed surface. */
 .send {
   flex: none;
   width: 44px;
   height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--fg);
-  color: var(--fg);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #e9d2a4, var(--gold));
+  color: #241a07;
+  box-shadow: var(--s2), 0 6px 16px -6px rgba(220, 192, 140, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .send:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: default;
 }
 
-/* ---------- Page drawer: the one orchestrated motion ---------- */
+/* ---------- Page drawer: a bottom sheet, the one orchestrated motion ----------
+   Scrim + sheet per the brief (Task 13): rgba(4,8,18,.62) with a light blur
+   behind a --bg sheet, 22px top corners, a deep upward shadow, a grab
+   handle, and a header that never scrolls out of thumb reach. The page
+   image sits on white with --s2 regardless of theme -- a scan is always
+   read against paper, never against the cabin's navy ground. */
 
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(4, 8, 18, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   z-index: 40;
 }
 
@@ -331,11 +641,13 @@ main {
   right: 0;
   bottom: 0;
   z-index: 41;
+  display: flex;
+  flex-direction: column;
   max-height: 88vh;
-  overflow-y: auto;
-  background: var(--surface);
-  border-top: 1px solid var(--rule);
-  padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--hi), 0 -4px 10px -6px rgba(0, 0, 0, 0.3), 0 -20px 44px -16px rgba(0, 0, 0, 0.42);
   transform: translateY(100%);
   transition: transform 0.32s ease;
 }
@@ -348,66 +660,126 @@ main {
   pointer-events: none;
 }
 
+.drawer-grab {
+  flex: none;
+  width: 36px;
+  height: 4px;
+  margin: 10px auto 2px;
+  border-radius: 99px;
+  background: var(--rule);
+}
+
 .drawer-head {
+  flex: none;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  padding: 6px 16px 12px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.drawer-heading {
+  min-width: 0;
 }
 
 .drawer-label {
   margin: 0 0 4px;
-  font-family: var(--font-mono);
-  font-size: var(--text-body-sm);
+  font-family: var(--ff-mono);
+  font-size: 12px;
   font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
 }
 
 .drawer-sub {
   margin: 0;
   color: var(--dim);
-  font-size: var(--text-meta);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .drawer-revision {
   margin-top: 2px;
 }
 
+/* A real dismiss target for one-handed use: 44px, not the 36px a styled
+   div would get away with. */
 .drawer-close {
   flex: none;
-  width: 36px;
-  height: 36px;
-  font-size: 22px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
   line-height: 1;
-  border: 1px solid var(--rule);
+  color: var(--dim);
+  border-radius: 50%;
+  background: var(--raised);
+  box-shadow: var(--s1), var(--hi);
 }
 
-.drawer-text {
-  margin: 16px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-mono);
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
+
+.drawer-quote {
+  margin: 0 0 16px;
+  padding: 11px 13px;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   overflow-x: auto;
-  border-left: 3px solid var(--halo);
-  padding-left: 14px;
+  color: var(--text);
+  background: var(--sunken);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
 }
 
 .drawer-image {
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
 .drawer-note {
+  margin: 0;
   color: var(--dim);
-  font-size: var(--text-body-sm);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* The scan sits on its own white mat regardless of theme -- a printed page
+   read against paper, not against the cabin's navy ground -- with --s2
+   lifting it the way the "paper" citation card is lifted. Fit-to-width lets
+   the manual's tall, narrow-ish page read at 360px; native pinch-zoom
+   (the app sets no maximum-scale) is how she gets into fine print, so no
+   in-drawer zoom control duplicates what the browser already gives her. */
+.drawer-page-frame {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--s2);
+  overflow: hidden;
+  padding: 6px;
 }
 
 .drawer-page {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 4px;
 }
 
-/* ---------- Manual (TOC) browser ---------- */
+/* ---------- Manual contents list ----------
+   Rows for the flat TOC GET /api/toc returns. A --hair divider between
+   every row (nothing heavier), the section id in mono --accent, and a
+   chevron on the rows that are actually openable -- see the mockup's
+   "Manual" / "CONTENTS" demo, authoritative over plan prose here. */
 
 .toc {
   flex: 1;
@@ -416,50 +788,177 @@ main {
 }
 
 .toc-row {
-  padding: 14px 0;
+  border-bottom: 1px solid var(--hair);
 }
 
 .toc-open {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   text-align: left;
   min-height: 44px;
+  padding: 14px 2px;
+}
+
+/* Part-level dividers and unsectioned front matter have no `section` id to
+   open (see TocBrowser.tsx) -- same row shape, no button semantics. */
+.toc-row-static {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 14px 2px;
+  color: var(--dim);
 }
 
 .toc-id {
   flex: none;
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
-  color: var(--dim);
+  font-family: var(--ff-mono);
+  font-size: 11.5px;
+  color: var(--accent);
   min-width: 3.5em;
+}
+
+.toc-row-static .toc-id {
+  color: var(--dim);
 }
 
 .toc-title {
   flex: 1;
-  font-size: var(--text-body-sm);
+  font-size: 15px;
 }
 
 .toc-pages {
   flex: none;
-  font-size: var(--text-meta);
+  font-family: var(--ff-mono);
+  font-size: 10px;
   color: var(--dim);
 }
 
-.toc-preview {
-  margin: 12px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-mono);
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-x: auto;
-  border-left: 3px solid var(--halo);
-  padding-left: 14px;
+.toc-chevron {
+  flex: none;
+  font-size: 12px;
+  color: var(--dim);
 }
 
 .toc-error {
   padding: 16px;
+}
+
+/* ---------- Section reader ----------
+   Opening a section replaces the contents list with this: a header that
+   never scrolls away (a flex sibling of the scrolling body, exactly as the
+   mockup's .mh/.doc pair does -- not a real `position: sticky`, which
+   isn't needed when the header simply isn't part of the scroll container)
+   followed by every `ReadingPage` in the section in one continuous scroll.
+   `<ManualBlocks>` (Task 10) renders each page's blocks -- this file adds
+   no second renderer for manual text. */
+
+.reader {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.reader-head {
+  flex: none;
+  padding: 13px 16px 12px;
+  background: var(--chrome);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom: 1px solid var(--hair);
+}
+
+.reader-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -10px 0 -8px -8px;
+  padding: 10px 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.reader-title {
+  font-family: var(--ff-display);
+  font-size: 25px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.reader-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 5px 0 0;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--dim);
+}
+
+.reader-rail {
+  height: 3px;
+  background: var(--sunken);
+  margin-top: 11px;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: var(--inset);
+}
+
+.reader-rail i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: 3px;
+}
+
+.reader-doc {
+  flex: 1;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 16px 24px;
+}
+
+/* The page-break marker between every ReadingPage, empty or not -- an
+   empty page stays in the list at its real page_in_section rather than
+   being skipped, so numbering never drifts from the paper manual a reader
+   is cross-checking against. */
+.reader-pb {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 22px 0 11px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+}
+
+.reader-doc > section:first-child .reader-pb {
+  margin-top: 8px;
+}
+
+.reader-pb i {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.reader-blank {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.reader-note {
+  padding: 16px 2px;
+  color: var(--dim);
+  font-size: 13px;
 }
 
 /* Tab panes: both stay mounted (see App.tsx) so switching tabs never
