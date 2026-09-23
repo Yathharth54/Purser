@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.png" alt="Purser Agent" width="100%">
+</p>
+
 # Purser
 
 A cited retrieval agent over the Airbus A320/321 Safety and Emergency Procedures
