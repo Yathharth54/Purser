@@ -1,51 +1,52 @@
-/*
- * Design tokens from .superpowers/sdd/2026-09-22-purser/design-plan.md.
- * Task 17 only wires up the two webfonts and the color tokens themselves --
- * all component styling (light/cabin theme switching, layout, etc.) is
- * Task 18's job.
- */
+/* Purser Agent — brand tokens.
+   Gold marks the manual and the one primary action. It is never a surface,
+   never body text on ivory (where it fails contrast), and never a gradient
+   wash. If it lands on a secondary button, this system has collapsed into a
+   generic dark theme with an accent colour. */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 :root {
-  /* Color -- "the cabin at night, not a theme" */
-  --paper: #f2f5f7; /* cool white. Light mode base. */
-  --ink: #0e1826; /* desaturated navy. Text on paper; base in cabin mode. */
-  --deck: #17243a; /* raised surface in cabin mode */
-  --halo: #7be5a0; /* photoluminescent green. Citations only. Never a button. */
-  --dim: #7c8ca3; /* secondary text, tool progress, timestamps */
-  --caution: #e8a33d; /* the manual's own WARNING/CAUTION convention */
+  --navy-900: #090f21;
+  --navy-860: #0c1426;
+  --navy-820: #111a33;
+  --navy-700: #243056;
+  --sky-top:  #0c1f3a;
+  --sky-mid:  #1a3053;
+  --dawn:     #fccc8a;
+  --ivory:    #f6efe3;
+  --gold:     #dcc08c;
+  --gold-ink: #7a5f21; /* gold is illegible on ivory; this is its day-mode voice */
 
-  /* Type -- two voices, both functionally justified */
-  --font-ui: "Atkinson Hyperlegible", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
-
-  /* Scale: 15/17px body (larger than typical), 13px mono, 12px meta */
-  --text-body-sm: 15px;
-  --text-body-lg: 17px;
-  --text-mono: 13px;
-  --text-meta: 12px;
+  --ff-display: "Cormorant Garamond", Georgia, serif;
+  --ff-ui:      "Atkinson Hyperlegible", system-ui, sans-serif;
+  --ff-mono:    "IBM Plex Mono", ui-monospace, monospace;
 }
 
-* {
-  box-sizing: border-box;
+/* Day — the primary design. */
+:root, :root[data-theme="day"] {
+  --bg: #f7f3ec; --chrome: rgba(247,243,236,.84); --raised: #fff; --sunken: #ece5d8;
+  --text: #101828; --dim: #5f6a7e; --rule: #ded6c6; --hair: rgba(23,18,8,.07);
+  --me: #e3d8c0; --paper: #fffdf9; --paper-ink: #161d2c; --accent: var(--gold-ink);
+  --s1: 0 1px 2px rgba(60,48,26,.13), 0 2px 5px -1px rgba(60,48,26,.09);
+  --s2: 0 1px 2px rgba(60,48,26,.16), 0 5px 12px -3px rgba(60,48,26,.16),
+        0 14px 28px -10px rgba(60,48,26,.14);
+  --s3: 0 2px 5px rgba(60,48,26,.2), 0 12px 26px -8px rgba(60,48,26,.26),
+        0 28px 54px -18px rgba(60,48,26,.22);
+  --inset: inset 0 1px 3px rgba(60,48,26,.18);
+  --hi: inset 0 1px 0 rgba(255,255,255,.9);
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  font-size: var(--text-body-sm);
-  -webkit-font-smoothing: antialiased;
-}
-
-code,
-pre,
-.manual-text {
-  font-family: var(--font-mono);
-  font-size: var(--text-mono);
+/* Cabin — the dim-light reading mode. Shadows deepen because the ground is dark. */
+:root[data-theme="cabin"] {
+  --bg: var(--navy-900); --chrome: rgba(9,15,33,.8); --raised: var(--navy-820);
+  --sunken: var(--navy-860); --text: var(--ivory); --dim: #8c99b6;
+  --rule: var(--navy-700); --hair: rgba(255,255,255,.09); --me: #243560;
+  --paper: #131d38; --paper-ink: var(--ivory); --accent: var(--gold);
+  --s1: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px -1px rgba(0,0,0,.35);
+  --s2: 0 1px 3px rgba(0,0,0,.45), 0 6px 14px -3px rgba(0,0,0,.45),
+        0 16px 32px -12px rgba(0,0,0,.5);
+  --s3: 0 2px 6px rgba(0,0,0,.5), 0 14px 30px -8px rgba(0,0,0,.6),
+        0 34px 64px -20px rgba(0,0,0,.6);
+  --inset: inset 0 1px 3px rgba(0,0,0,.22);
+  --hi: inset 0 1px 0 rgba(255,255,255,.07);
 }
