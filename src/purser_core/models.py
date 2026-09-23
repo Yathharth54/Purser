@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, model_validator
 
@@ -63,6 +64,21 @@ class Page(BaseModel):
         """
         skip = set(self.chrome)
         return [(i, s) for i, s in enumerate(self.lines) if s.strip() and i not in skip]
+
+
+class Block(BaseModel):
+    """One structural unit of the manual, recovered from the text layer.
+
+    `text` is verbatim for every kind EXCEPT `para`, `bullet` and `note`, where
+    lines the PDF hard-wrapped are rejoined with a single space. That restores
+    the sentence the author wrote; the line break at column 90 was a layout
+    artifact, not meaning. `table` keeps its own newlines and leading spaces,
+    because its columns ARE the information.
+    """
+
+    kind: Literal["heading", "subheading", "para", "bullet", "note", "caption", "table"]
+    level: int = 0  # heading depth, or bullet nesting
+    text: str
 
 
 class PageText(BaseModel):
