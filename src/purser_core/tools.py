@@ -73,6 +73,7 @@ def _to_page_text(page: Page) -> PageText:
         section=page.section,
         section_title=page.section_title,
         page_in_section=page.page_in_section,
+        section_total=page.section_total,
         # Furniture is dropped; the index is NOT renumbered. The model cites the
         # number it is shown, and that number must still address Page.lines.
         numbered_lines=[f"{i}|{text}" for i, text in page.content_lines()],
@@ -129,18 +130,34 @@ class PurserTools:
         return [n for n in nodes if n.part == part] if part is not None else nodes
 
     def read_section(
-        self, section: str, page_from: int = 1, page_to: int | None = None
+        self,
+        section: str,
+        page_from: int = 1,
+        page_to: int | None = None,
+        max_pages: int | None = None,
     ) -> list[PageText]:
         """Read verbatim pages of a section, in order. Out-of-range values are clamped.
 
         See `clamp_by_page_in_section` for the clamp invariant this relies on --
         it is shared with `GET /api/section/{section}` so the two never drift apart.
+        `max_pages` keeps only the first N pages of the clamped range.
         """
         pages = self.corpus.pages_in_section(section)
-        return [_to_page_text(p) for p in clamp_by_page_in_section(pages, page_from, page_to)]
+        window = clamp_by_page_in_section(pages, page_from, page_to)
+        if max_pages is not None:
+            window = window[:max_pages]
+        return [_to_page_text(p) for p in window]
 
-    def read_page(self, pdf_page: int, before: int = 0, after: int = 0) -> list[PageText]:
-        """Read one page plus optional neighbours, for cheap context expansion."""
+    def read_page(
+        self, pdf_page: int, before: int = 0, after: int = 0, max_pages: int | None = None
+    ) -> list[PageText]:
+        """Read one page plus optional neighbours, for cheap context expansion.
+
+        `max_pages` bounds the whole window, split evenly either side of the page.
+        """
+        if max_pages is not None:
+            side = max(0, (max_pages - 1) // 2)
+            before, after = min(before, side), min(after, side)
         out: list[PageText] = []
         for n in range(pdf_page - before, pdf_page + after + 1):
             try:

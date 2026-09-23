@@ -90,6 +90,7 @@ class PageText(BaseModel):
     section: str | None
     section_title: str | None
     page_in_section: int
+    section_total: int  # so a windowed read never looks like the whole section
     numbered_lines: list[str]  # "12|CABIN CREW SHALL..." — index is the citable one
 
 
