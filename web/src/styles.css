@@ -616,12 +616,19 @@ main {
   cursor: default;
 }
 
-/* ---------- Page drawer: the one orchestrated motion ---------- */
+/* ---------- Page drawer: a bottom sheet, the one orchestrated motion ----------
+   Scrim + sheet per the brief (Task 13): rgba(4,8,18,.62) with a light blur
+   behind a --bg sheet, 22px top corners, a deep upward shadow, a grab
+   handle, and a header that never scrolls out of thumb reach. The page
+   image sits on white with --s2 regardless of theme -- a scan is always
+   read against paper, never against the cabin's navy ground. */
 
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(4, 8, 18, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   z-index: 40;
 }
 
@@ -631,11 +638,13 @@ main {
   right: 0;
   bottom: 0;
   z-index: 41;
+  display: flex;
+  flex-direction: column;
   max-height: 88vh;
-  overflow-y: auto;
-  background: var(--surface);
-  border-top: 1px solid var(--rule);
-  padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--hi), 0 -4px 10px -6px rgba(0, 0, 0, 0.3), 0 -20px 44px -16px rgba(0, 0, 0, 0.42);
   transform: translateY(100%);
   transition: transform 0.32s ease;
 }
@@ -648,63 +657,117 @@ main {
   pointer-events: none;
 }
 
+.drawer-grab {
+  flex: none;
+  width: 36px;
+  height: 4px;
+  margin: 10px auto 2px;
+  border-radius: 99px;
+  background: var(--rule);
+}
+
 .drawer-head {
+  flex: none;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  padding: 6px 16px 12px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.drawer-heading {
+  min-width: 0;
 }
 
 .drawer-label {
   margin: 0 0 4px;
-  font-family: var(--font-mono);
-  font-size: var(--text-body-sm);
+  font-family: var(--ff-mono);
+  font-size: 12px;
   font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
 }
 
 .drawer-sub {
   margin: 0;
   color: var(--dim);
-  font-size: var(--text-meta);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .drawer-revision {
   margin-top: 2px;
 }
 
+/* A real dismiss target for one-handed use: 44px, not the 36px a styled
+   div would get away with. */
 .drawer-close {
   flex: none;
-  width: 36px;
-  height: 36px;
-  font-size: 22px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
   line-height: 1;
-  border: 1px solid var(--rule);
+  color: var(--dim);
+  border-radius: 50%;
 }
 
-.drawer-text {
-  margin: 16px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-mono);
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
+
+.drawer-quote {
+  margin: 0 0 16px;
+  padding: 11px 13px;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   overflow-x: auto;
-  border-left: 3px solid var(--halo);
-  padding-left: 14px;
+  color: var(--text);
+  background: var(--sunken);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
 }
 
 .drawer-image {
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
 .drawer-note {
+  margin: 0;
   color: var(--dim);
-  font-size: var(--text-body-sm);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* The scan sits on its own white mat regardless of theme -- a printed page
+   read against paper, not against the cabin's navy ground -- with --s2
+   lifting it the way the "paper" citation card is lifted. Fit-to-width lets
+   the manual's tall, narrow-ish page read at 360px; native pinch-zoom
+   (the app sets no maximum-scale) is how she gets into fine print, so no
+   in-drawer zoom control duplicates what the browser already gives her. */
+.drawer-page-frame {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--s2);
+  overflow: hidden;
+  padding: 6px;
 }
 
 .drawer-page {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 4px;
 }
 
 /* ---------- Manual contents list ----------
