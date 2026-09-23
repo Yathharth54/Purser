@@ -201,7 +201,7 @@ def test_chat_streams_answer_then_resolved_citations(client, monkeypatch):
 
     answer = Answer(
         body="Evacuate via the nearest usable exit.",
-        refs=[CiteRef(pdf_page=600, line_from=0, line_to=2)],
+        refs=[CiteRef(pdf_page=600, line_from=0, line_to=15)],
         not_in_manual=False,
     )
     monkeypatch.setattr(chat_mod, "get_agent", lambda: _FakeAgent(answer))
@@ -286,7 +286,7 @@ def test_chat_drops_unresolvable_refs_but_keeps_good_ones(client, monkeypatch):
     answer = Answer(
         body="Two things.",
         refs=[
-            CiteRef(pdf_page=600, line_from=0, line_to=2),
+            CiteRef(pdf_page=600, line_from=0, line_to=15),
             CiteRef(pdf_page=1, line_from=900, line_to=901),
         ],
     )
@@ -480,7 +480,7 @@ def test_chat_works_against_a_real_pydantic_ai_agent(client, monkeypatch):
 
     valid_answer_args = {
         "body": "Evacuate via the nearest usable exit.",
-        "refs": [{"pdf_page": 600, "line_from": 2, "line_to": 5}],
+        "refs": [{"pdf_page": 600, "line_from": 12, "line_to": 15}],
         "not_in_manual": False,
     }
     test_model = TestModel(custom_output_args=valid_answer_args)

@@ -28,6 +28,15 @@ def resolve(corpus: Corpus, ref: CiteRef) -> Citation | None:
         log.warning("citation dropped: empty range %s:%s on p%s", lo, hi, ref.pdf_page)
         return None
 
+    chrome = set(page.chrome)
+    while lo < hi and (lo in chrome or not page.lines[lo].strip()):
+        lo += 1
+    while hi > lo and (hi - 1 in chrome or not page.lines[hi - 1].strip()):
+        hi -= 1
+    if lo >= hi:
+        log.warning("citation dropped: pure furniture %s:%s on p%s", lo, hi, ref.pdf_page)
+        return None
+
     return Citation(
         pdf_page=page.pdf_page,
         part=page.part,

@@ -15,22 +15,8 @@ def corpus():
     return Corpus("data")
 
 
-def test_full_page_range_reproduces_the_page_byte_for_byte(corpus):
-    """Sanity check only -- NOT a pin on the half-open boundary.
-
-    `line_to=len(page.lines)` means `hi` is already capped at `len(page.lines)`
-    before the slice runs, so an off-by-one on `line_to` (e.g. `+1`) would not
-    show up here: `hi` is clamped to the same value either way. It is
-    `test_partial_range_is_exact` below that actually pins the boundary --
-    verified live in the task report's mutation-check transcript.
-    """
-    page = corpus.page(600)
-    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=len(page.lines)))
-    assert cite.text == "\n".join(page.lines)
-
-
 def test_resolved_citation_carries_her_coordinates(corpus):
-    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=3))
+    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=15))
     assert str(cite.part) == "PART FOUR"
     assert cite.section == "4.4"
     assert cite.section_title == "Evacuations"
@@ -50,8 +36,8 @@ def test_partial_range_is_exact(corpus):
     `line_to + 1` mutation -- see the task report's mutation-check transcript.)
     """
     page = corpus.page(600)
-    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=2, line_to=5))
-    assert cite.text == "\n".join(page.lines[2:5])
+    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=12, line_to=15))
+    assert cite.text == "\n".join(page.lines[12:15])
 
 
 def test_out_of_range_lines_are_clamped_not_raised(corpus):
@@ -89,7 +75,7 @@ def test_unknown_page_returns_none(corpus, monkeypatch):
 
 def test_resolve_all_drops_bad_refs_and_keeps_good_ones(corpus):
     refs = [
-        CiteRef(pdf_page=600, line_from=0, line_to=2),
+        CiteRef(pdf_page=600, line_from=0, line_to=15),
         CiteRef(pdf_page=1, line_from=900, line_to=901),
     ]
     assert len(resolve_all(corpus, refs)) == 1
@@ -99,3 +85,37 @@ def test_resolve_all_of_no_refs_is_a_clean_empty_list(corpus):
     """A `not_in_manual=True` / zero-ref `Answer` is a normal result, not an
     error -- the API must render it without complaint."""
     assert resolve_all(corpus, []) == []
+
+
+def test_leading_and_trailing_furniture_is_trimmed_from_a_citation(corpus):
+    """Task 3 stops the model citing furniture. This stops it mattering when it does.
+
+    A model asked for a whole page will still sometimes emit line_from=0. The
+    quote card then opens with 'InterGlobe Aviation Limited / NOT A CONTROLLED
+    COPY' instead of the procedure, which reads as though the manual says
+    nothing useful.
+    """
+    page = corpus.page(600)
+    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=len(page.lines)))
+    assert cite is not None
+    assert "InterGlobe" not in cite.text.splitlines()[0]
+    assert "NOT A CONTROLLED COPY" not in cite.text.splitlines()[0]
+    assert "Page 1 of" not in cite.text.splitlines()[-1]
+    assert "life raft" in cite.text
+
+
+def test_interior_furniture_is_left_alone(corpus):
+    """Trim the edges only.
+
+    Removing an interior line would make the quote a non-contiguous fabrication
+    -- text that appears nowhere on the page in that order. Edges are safe; the
+    middle is not ours to edit.
+    """
+    page = corpus.page(600)
+    cite = resolve(corpus, CiteRef(pdf_page=600, line_from=0, line_to=len(page.lines)))
+    assert cite is not None
+    assert cite.text in "\n".join(page.lines)
+
+
+def test_a_citation_of_pure_furniture_resolves_to_none(corpus):
+    assert resolve(corpus, CiteRef(pdf_page=314, line_from=0, line_to=20)) is None
