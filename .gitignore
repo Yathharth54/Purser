@@ -30,3 +30,8 @@ web/dist/
 
 # TS incremental build info
 web/*.tsbuildinfo
+.vercel
+.env*
+
+# embedding model baked in at Vercel build time
+.models/

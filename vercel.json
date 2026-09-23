@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "uv run --frozen python scripts/vercel_build.py",
+  "functions": {
+    "app.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{.venv/**,tests/**,docs/**,scripts/**,assets/**,var/**,web/src/**,web/node_modules/**,web/public/**,**/__pycache__/**,**/*.test.*}"
+    }
+  }
+}
