@@ -10,10 +10,18 @@ from __future__ import annotations
 
 import re
 
-# Derived by counting hits across the whole corpus, not guessed:
-#   InterGlobe/ifly.SEP  1,229   NOT A CONTROLLED COPY  1,226
-#   manual title         1,223   Issue N Revision NN    1,200
-#   Page N of M          1,200   Effective <date>          22
+# Derived by counting matches across the whole corpus:
+# Pattern                                  Total hits  Unique to this pattern
+#   InterGlobe Aviation Limited                1,217    0 (overlaps with ifly.SEP)
+#   ifly.SEP                                   1,228    11
+#   NOT A CONTROLLED COPY                      1,226    0 (always with other patterns)
+#   SAFETY AND EMERGENCY PROCEDURES MANUAL     1,223    0 (always with other patterns)
+#   Issue\s+[IVXLC]+\s+Revision\s+\d+          1,200    0 (always with other patterns)
+#   Page\s+\d+\s+of\s+\d+                      1,200    0 (currently subsumed by Effective)
+#   Effective\s*\d{1,2}\s                      1,222    22 (the only pattern catching these)
+#
+# Note: Page N of M has no unique hits currently—every instance also matches Effective.
+# It is retained deliberately as insurance against future footer format revisions.
 _CHROME = re.compile(
     r"InterGlobe Aviation Limited"
     r"|ifly\.SEP"
