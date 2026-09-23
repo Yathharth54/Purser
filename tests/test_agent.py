@@ -130,3 +130,16 @@ def test_the_agent_reads_sections_and_neighbours_in_bounded_windows(monkeypatch)
     ctx = SimpleNamespace(deps=PurserDeps(tools=tools))
     assert len(fns["read_section"].function(ctx, section="4.4")) == MAX_READ_PAGES
     assert len(fns["read_page"].function(ctx, pdf_page=600, before=20, after=20)) <= MAX_READ_PAGES
+
+
+def test_the_agent_caps_output_tokens_per_model_call(monkeypatch):
+    """Without a cap the request asks for the model's maximum (131,072 tokens on
+    DeepSeek v4.1 Flash) and OpenRouter reserves credit for all of it up front:
+    a low balance then rejects every question with 402. Real answers use
+    300-2,000 output tokens."""
+    from purser_agent.lookup import MAX_OUTPUT_TOKENS
+
+    monkeypatch.setenv("PURSER_MODEL", "openrouter:deepseek/deepseek-v4.1-flash")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "not-used")
+    agent = build_agent(PurserTools("data"))
+    assert agent.model_settings["max_tokens"] == MAX_OUTPUT_TOKENS <= 8192

@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": [
+    "bom1"
+  ],
   "buildCommand": "uv run --frozen python scripts/vercel_build.py",
   "functions": {
     "app.py": {

@@ -15,6 +15,12 @@ from purser_core.tools import PurserTools
 # ditching question measured 454k input tokens over 16 model calls.
 MAX_READ_PAGES = 6
 
+# Output tokens per model call. Uncapped, a request asks for the model's
+# maximum (131,072 on DeepSeek v4.1 Flash) and OpenRouter reserves credit for
+# all of it up front, so a low balance rejects every question with 402. Real
+# answers use 300-2,000.
+MAX_OUTPUT_TOKENS = 4096
+
 
 @dataclass
 class PurserDeps:
@@ -34,6 +40,7 @@ def build_agent(tools: PurserTools) -> Agent[PurserDeps, Answer]:
         output_type=Answer,
         system_prompt=SYSTEM_PROMPT,
         retries=2,
+        model_settings={"max_tokens": MAX_OUTPUT_TOKENS},
     )
 
     @agent.tool

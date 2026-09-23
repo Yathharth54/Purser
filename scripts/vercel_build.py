@@ -40,6 +40,10 @@ def main() -> None:
     subprocess.run(["npm", "run", "build"], cwd=ROOT / "web", check=True)
 
     os.environ["FASTEMBED_CACHE_PATH"] = str(MODELS)
+    # HF_HUB_OFFLINE=1 is a project env var so the RUNTIME never downloads;
+    # Vercel applies it to builds too, and this is the one download we want.
+    # huggingface_hub reads it at import, so drop it before importing fastembed.
+    os.environ.pop("HF_HUB_OFFLINE", None)
     from fastembed import TextEmbedding
 
     from purser_core.embed import MODEL_NAME
