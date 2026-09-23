@@ -28,6 +28,7 @@ function loadTheme(): Theme {
 
 export default function App() {
   const [tab, setTab] = useState<"chat" | "manual">("chat");
+  const [seenManual, setSeenManual] = useState(false);
   const [citation, setCitation] = useState<Citation | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme);
 
@@ -48,7 +49,13 @@ export default function App() {
           <button className={tab === "chat" ? "on" : ""} onClick={() => setTab("chat")}>
             Ask
           </button>
-          <button className={tab === "manual" ? "on" : ""} onClick={() => setTab("manual")}>
+          <button
+            className={tab === "manual" ? "on" : ""}
+            onClick={() => {
+              setSeenManual(true);
+              setTab("manual");
+            }}
+          >
             Manual
           </button>
         </nav>
@@ -62,7 +69,22 @@ export default function App() {
         </button>
       </header>
 
-      <main>{tab === "chat" ? <Chat onOpenCitation={setCitation} /> : <TocBrowser />}</main>
+      {/* Both panes stay mounted and are hidden with CSS rather than swapped.
+          Chat owns the transcript and the thread id in local state, so
+          unmounting it threw away her whole conversation the moment she
+          tapped Manual to check something -- which is exactly what she does
+          mid-procedure. Keeping it mounted also preserves scroll position.
+          The manual pane is mounted lazily on first use, then kept. */}
+      <main>
+        <div className="pane" style={{ display: tab === "chat" ? "flex" : "none" }}>
+          <Chat onOpenCitation={setCitation} />
+        </div>
+        {seenManual && (
+          <div className="pane" style={{ display: tab === "manual" ? "flex" : "none" }}>
+            <TocBrowser />
+          </div>
+        )}
+      </main>
 
       <PageDrawer citation={citation} onClose={() => setCitation(null)} />
     </div>

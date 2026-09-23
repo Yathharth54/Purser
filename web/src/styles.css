@@ -461,3 +461,12 @@ main {
 .toc-error {
   padding: 16px;
 }
+
+/* Tab panes: both stay mounted (see App.tsx) so switching tabs never
+   discards the conversation. The inactive one is display:none. */
+.pane {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
