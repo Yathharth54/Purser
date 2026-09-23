@@ -22,17 +22,33 @@
   --ff-mono:    "IBM Plex Mono", ui-monospace, monospace;
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
 /* Day — the primary design. */
 :root, :root[data-theme="day"] {
   --bg: #f7f3ec; --chrome: rgba(247,243,236,.84); --raised: #fff; --sunken: #ece5d8;
-  --text: #101828; --dim: #5f6a7e; --rule: #ded6c6; --hair: rgba(23,18,8,.07);
+  /* --dim darkened from the mockup's #5f6a7e (4.36:1 on --sunken, below AA)
+     to the minimum shift that clears 4.5:1 against --sunken -- see
+     task-8-report.md fix log for both recomputed contrast figures. */
+  --text: #101828; --dim: #5c677b; --rule: #ded6c6; --hair: rgba(23,18,8,.07);
   --me: #e3d8c0; --paper: #fffdf9; --paper-ink: #161d2c; --accent: var(--gold-ink);
   --s1: 0 1px 2px rgba(60,48,26,.13), 0 2px 5px -1px rgba(60,48,26,.09);
   --s2: 0 1px 2px rgba(60,48,26,.16), 0 5px 12px -3px rgba(60,48,26,.16),
         0 14px 28px -10px rgba(60,48,26,.14);
   --s3: 0 2px 5px rgba(60,48,26,.2), 0 12px 26px -8px rgba(60,48,26,.26),
         0 28px 54px -18px rgba(60,48,26,.22);
-  --inset: inset 0 1px 3px rgba(60,48,26,.18);
+  /* Black-based, not the brown-tinted rgba(60,48,26,...) used for --s1/2/3:
+     every inset shadow in the mockup (seg track, field, day chip, think
+     chip, manual table) is rgba(0,0,0,...) in both themes -- there is no
+     warm-tinted recess anywhere in the approved design. */
+  --inset: inset 0 1px 3px rgba(0,0,0,.18);
   --hi: inset 0 1px 0 rgba(255,255,255,.9);
 }
 
