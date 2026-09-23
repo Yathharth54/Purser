@@ -63,19 +63,11 @@ export interface TocNode {
   pages: number;
 }
 
-export interface PageText {
-  pdf_page: number;
-  part: string;
-  section: string | null;
-  section_title: string | null;
-  page_in_section: number;
-  numbered_lines: string[];
-}
-
 /**
  * GET /api/section/{section} element -- one page of the manual, shaped for
- * a person reading it rather than for the agent (contrast `PageText`,
- * whose `numbered_lines` are the agent's citable view of a page).
+ * a person reading it rather than for the agent (the agent's own citable
+ * view of a page, numbered_lines and all, is server-side only -- nothing
+ * on this client needs it).
  *
  * `empty` is true for the ~8 pages of the manual that carry no text after
  * de-chroming -- `blocks` is `[]` for those, and they're still returned in

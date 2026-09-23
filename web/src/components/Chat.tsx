@@ -169,9 +169,9 @@ export function Chat({ onOpenCitation }: Props) {
         {turns.map((turn, i) => {
           if (turn.role === "user") {
             return (
-              <div key={i} className="me">
+              <article key={i} className="me">
                 {turn.body}
-              </div>
+              </article>
             );
           }
 

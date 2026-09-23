@@ -30,7 +30,7 @@ interface Props {
 export function ManualBlocks({ blocks }: Props) {
   return (
     <div className="manual-blocks">
-      {blocks.map((block, i) => (
+      {(blocks ?? []).map((block, i) => (
         <ManualBlock key={i} block={block} />
       ))}
     </div>

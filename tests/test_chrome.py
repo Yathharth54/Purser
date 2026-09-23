@@ -76,9 +76,13 @@ def test_corpus_wide_counts_match_the_measurement():
     con = sqlite3.connect("data/manual.sqlite")
     total = chrome = content = 0
     empty_pages = []
-    for pdf_page, raw in con.execute("select pdf_page, lines from pages order by pdf_page"):
+    for pdf_page, raw, raw_chrome in con.execute(
+        "select pdf_page, lines, chrome from pages order by pdf_page"
+    ):
         lines = json.loads(raw)
-        idx = set(chrome_line_indices(lines))
+        recomputed = chrome_line_indices(lines)
+        assert json.loads(raw_chrome) == recomputed
+        idx = set(recomputed)
         total += len(lines)
         chrome += len(idx)
         kept = [i for i, s in enumerate(lines) if s.strip() and i not in idx]

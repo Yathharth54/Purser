@@ -35,7 +35,11 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
     widths = sorted(len(s.rstrip()) for _, s in body if s.strip())
     # 70th percentile, not the max: one wide table row would otherwise set the
     # bar so high that no prose line ever counts as wrapped.
-    full = max(0, (widths[int(len(widths) * 0.70)] - 4) if widths else 0)
+    # No floor at 0: `prev_len` starts at 0 and `prev_len >= full` below is
+    # unconditionally true whenever `full <= 0`, so a floor here bought no
+    # protection -- a narrow page over-joining unrelated lines is a real,
+    # open risk, not one this line was actually closing.
+    full = (widths[int(len(widths) * 0.70)] - 4) if widths else 0
 
     out: list[Block] = []
     open_indent: list[int | None] = []  # parallel to out; None once a block is closed

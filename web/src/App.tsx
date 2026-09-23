@@ -6,16 +6,20 @@ import { Wordmark } from "./components/Wordmark";
 import type { Citation } from "./api/types";
 import "./styles.css";
 
-type Theme = "light" | "cabin";
+type Theme = "day" | "cabin";
 
 function loadTheme(): Theme {
   try {
     const saved = window.localStorage.getItem("purser-theme");
-    if (saved === "light" || saved === "cabin") return saved;
+    // "light" was this value's name before the CSS's own "day"/"cabin" naming
+    // was made the source of truth -- migrate an existing install rather than
+    // silently falling back to the default below.
+    if (saved === "light") return "day";
+    if (saved === "day" || saved === "cabin") return saved;
   } catch {
     // localStorage unavailable (private mode, etc.) -- fall through to default.
   }
-  // No explicit choice yet. Light is the primary design, but she opens this in a
+  // No explicit choice yet. Day is the primary design, but she opens this in a
   // darkened cabin with her phone already in dark mode -- honour that on first run
   // rather than flashing a white screen at her mid-duty. An explicit toggle always
   // wins over this, because it is stored above.
@@ -24,7 +28,7 @@ function loadTheme(): Theme {
   } catch {
     // matchMedia unavailable -- fall through.
   }
-  return "light";
+  return "day";
 }
 
 export default function App() {
@@ -47,9 +51,7 @@ export default function App() {
   // landing on "tab, 1 of 2" gets nothing.
   function handleSegKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
     let next: "chat" | "manual" | null = null;
-    if (event.key === "ArrowRight") {
-      next = tab === "chat" ? "manual" : "chat";
-    } else if (event.key === "ArrowLeft") {
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
       next = tab === "chat" ? "manual" : "chat";
     } else if (event.key === "Home") {
       next = "chat";
@@ -80,11 +82,11 @@ export default function App() {
           <button
             type="button"
             className="theme-toggle"
-            onClick={() => setTheme((t) => (t === "light" ? "cabin" : "light"))}
-            aria-label={theme === "light" ? "Switch to cabin reading mode" : "Switch to day mode"}
+            onClick={() => setTheme((t) => (t === "day" ? "cabin" : "day"))}
+            aria-label={theme === "day" ? "Switch to cabin reading mode" : "Switch to day mode"}
           >
             <span className="theme-toggle-icon" aria-hidden="true">
-              {theme === "light" ? "☾" : "☀"}
+              {theme === "day" ? "☾" : "☀"}
             </span>
           </button>
         </div>
@@ -140,17 +142,15 @@ export default function App() {
         >
           <Chat onOpenCitation={setCitation} />
         </div>
-        {seenManual && (
-          <div
-            className="pane"
-            id="panel-manual"
-            role="tabpanel"
-            aria-labelledby="tab-manual"
-            style={{ display: tab === "manual" ? "flex" : "none" }}
-          >
-            <TocBrowser />
-          </div>
-        )}
+        <div
+          className="pane"
+          id="panel-manual"
+          role="tabpanel"
+          aria-labelledby="tab-manual"
+          style={{ display: tab === "manual" ? "flex" : "none" }}
+        >
+          {seenManual && <TocBrowser />}
+        </div>
       </main>
 
       <PageDrawer citation={citation} onClose={() => setCitation(null)} />

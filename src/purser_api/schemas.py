@@ -38,3 +38,9 @@ class ThreadSummary(BaseModel):
     id: str
     title: str
     updated_at: str
+
+
+class ThreadMessage(BaseModel):
+    role: str
+    body: str
+    citations: list[Citation]

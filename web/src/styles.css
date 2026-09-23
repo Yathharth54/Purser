@@ -285,6 +285,7 @@ main {
   line-height: 1.48;
   white-space: pre-wrap;
   box-shadow: var(--s2), var(--hi);
+  overflow-wrap: anywhere;
 }
 
 /* ---------- The assistant's turn: avatar + one grouped stack ----------
@@ -336,6 +337,7 @@ main {
      laptop-width answer runs the full viewport, which is what
      recurrent-training reading on a laptop actually hits. */
   max-width: 70ch;
+  overflow-wrap: anywhere;
 }
 
 .stamp {
@@ -447,6 +449,7 @@ main {
 
 .paper-body {
   padding: 10px 13px 8px;
+  overflow-wrap: anywhere;
 }
 
 .paper-rev {
@@ -713,6 +716,8 @@ main {
   line-height: 1;
   color: var(--dim);
   border-radius: 50%;
+  background: var(--raised);
+  box-shadow: var(--s1), var(--hi);
 }
 
 .drawer-body {
@@ -833,7 +838,7 @@ main {
 
 .toc-chevron {
   flex: none;
-  font-size: 16px;
+  font-size: 12px;
   color: var(--dim);
 }
 
@@ -879,7 +884,7 @@ main {
 
 .reader-title {
   font-family: var(--ff-display);
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 600;
   margin: 0;
   color: var(--text);

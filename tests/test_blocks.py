@@ -170,7 +170,7 @@ def test_a_centred_header_row_does_not_truncate_the_table_body():
 
 
 @needs_index
-def test_no_content_is_lost_anywhere_in_the_corpus():
+def test_no_content_is_lost_on_the_reference_pages():
     """Every non-blank, non-chrome line must survive into some block.
 
     A parser that silently drops a line it does not recognise is the failure
