@@ -84,3 +84,29 @@ def test_content_lines_keeps_ORIGINAL_indices(corpus):
     for i, text in pairs:
         assert page.lines[i] == text
         assert i not in page.chrome
+
+
+def test_the_corpus_can_be_read_from_many_threads_at_once():
+    """The agent runs tool calls in parallel threads (a model may emit several at
+    once). One sqlite3 connection shared across threads returns corrupted rows --
+    None columns, IndexError, InterfaceError -- so each thread needs its own."""
+    import threading
+
+    corpus = Corpus("data")
+    errors: list[str] = []
+
+    def read() -> None:
+        for n in range(1, 200):
+            try:
+                corpus.page(n)
+            except KeyError:
+                pass
+            except Exception as e:  # noqa: BLE001 -- any failure here is the bug
+                errors.append(type(e).__name__)
+
+    threads = [threading.Thread(target=read) for _ in range(6)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
