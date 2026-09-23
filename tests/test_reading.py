@@ -45,7 +45,38 @@ def test_no_coordinates_and_no_furniture_reach_the_reader(corpus):
 
 def test_the_eight_empty_pages_are_marked_not_dropped(corpus):
     """Skipping a blank page would renumber the section against the paper
-    manual she is cross-checking."""
-    pages = reading_pages(corpus, "4.2")
+    manual she is cross-checking.
+
+    None of the corpus's 8 zero-content pages fall in 4.2 or 4.4: 5 have no
+    section at all (section=None, unreachable through `reading_pages` at
+    all) and the other 3 sit in 3.5 (two) and 3.13 (one). A check against
+    4.2/4.4 alone can only ever see `empty=False`, so it can never actually
+    observe the branch it's named for -- it would pass identically if
+    `empty` were hardcoded `False`. Use 3.13, the smallest section that has
+    one of the real empty pages (pdf_page 484, page_in_section 8 of 12).
+    """
+    pages = reading_pages(corpus, "3.13")
+    assert len(pages) == 12
     for p in pages:
         assert p.empty == (not p.blocks)
+    # The universal check above must actually exercise both branches, not
+    # just the (vacuously true) False one.
+    assert any(p.empty for p in pages)
+
+
+def test_an_empty_page_does_not_disturb_the_numbering_around_it(corpus):
+    """The reason an empty page is kept rather than skipped: dropping it
+    would shift every later page's `page_in_section` (and thus its label on
+    screen) out of sync with the printed manual. Pin that the page right
+    after the empty one keeps ITS correct number and content, not a
+    number one lower than it should be."""
+    pages = reading_pages(corpus, "3.13")
+    empty = next(p for p in pages if p.empty)
+    assert empty.pdf_page == 484
+    assert empty.page_in_section == 8
+    assert empty.blocks == []
+
+    after = next(p for p in pages if p.page_in_section == 9)
+    assert after.pdf_page == 485
+    assert not after.empty
+    assert after.blocks
