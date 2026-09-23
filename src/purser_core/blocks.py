@@ -22,6 +22,10 @@ BULLET_GLYPHS = "•"
 _NUM_HEAD = re.compile(r"^(\d+(?:\.\d+)*)\.\s+\S")
 _NOTE = re.compile(r"^(Note|Caution|Warning|NOTE|CAUTION|WARNING)\s*[:\-]\s*\S")
 _TABLE_CAP = re.compile(r"^Table\s+[\d.]+\s?[A-Z]{0,2}\d?\b.{0,40}$", re.IGNORECASE)
+# A line "looks like a table row" when it has an internal multi-space column
+# gap and does not open with a bullet glyph -- see the indent-drop comment
+# below for why both halves of that test matter.
+_ROW_GAP = re.compile(r"\S {3,}\S")
 
 
 def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
@@ -81,14 +85,21 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
 
         if in_table:
             # A table ends when a line's indent falls more than 2 columns below
-            # the indent of the table's own first row. A stricter (< table_indent)
-            # test would sever a real table at a wrapped header cell that sits a
-            # column or two left of the first row (pdf_page 552); a looser one
-            # (e.g. triggering on a bullet glyph or "Note:") would sever a real
-            # table that legitimately carries either inside a cell (pdf_page 130,
-            # pdf_page 552). Indent-drop past the tolerance is what a genuinely
-            # new, page-margin block looks like; nothing narrower is safe.
-            if table_indent is None or indent >= table_indent - 2:
+            # the indent of the table's own first row -- UNLESS that line still
+            # looks like a table row. The first row is not always representative
+            # of the table's left edge: a centred header label (pdf_page 613,
+            # "A-320          A-321") can sit far to the right of the body rows
+            # it labels, and indent-drop alone would close the table right after
+            # the header. A line with an internal multi-space column gap is a
+            # row regardless of indent; a line-initial bullet glyph is excluded
+            # from that test because a glyph followed by its padding reads as a
+            # column gap too (pdf_page 57), and would otherwise be wrongly
+            # absorbed into the table it precedes. An in-cell glyph (pdf_page
+            # 130) sits mid-row, not at indent-drop, so it is unaffected.
+            looks_like_row = _ROW_GAP.search(raw.rstrip()) is not None and (
+                stripped[0] not in BULLET_GLYPHS
+            )
+            if table_indent is None or indent >= table_indent - 2 or looks_like_row:
                 if table_indent is None:
                     table_indent = indent
                 table.append(raw.rstrip())

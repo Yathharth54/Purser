@@ -143,6 +143,33 @@ def test_a_caption_with_an_aircraft_suffix_still_opens_its_table():
 
 
 @needs_index
+def test_a_centred_header_row_does_not_truncate_the_table_body():
+    """A table whose first row is a narrow, centred label must not close early.
+
+    On pdf_page 613, 'Table 4.4J' opens with a centred header row
+    ('A-320          A-321') that sits far to the right of the two-column
+    body rows beneath it. Indent-drop alone treats every body row as an exit
+    from the table (their indent is well below the header's), closing the
+    table right after the header and dropping the entire A-320/A-321
+    procedure body to jumbled para blocks. A line with an internal
+    multi-space column gap is still a table row regardless of indent.
+    """
+    page = Corpus("data").page(613)
+    out = parse_blocks(page.lines, page.chrome)
+    tables = [b for b in out if b.kind == "table"]
+    assert len(tables) == 1
+    body = tables[0].text
+    assert "A-320" in body
+    assert "A-321" in body
+    # the two-column body -- not just the header -- must be inside the table
+    assert "the slide raft, R1, L2 and the R2 will" in body
+    assert "have boarded the slide raft, R1, L4" in body
+    assert not any(
+        "the slide raft, R1, L2 and the R2 will" in b.text for b in out if b.kind == "para"
+    )
+
+
+@needs_index
 def test_no_content_is_lost_anywhere_in_the_corpus():
     """Every non-blank, non-chrome line must survive into some block.
 
