@@ -207,7 +207,12 @@ main {
   overflow: hidden;
 }
 
-/* ---------- Chat ---------- */
+/* ---------- Chat: real bubbles, grouped turns ----------
+   Follows the approved mockup's transcript (docs/design/purser-v2-mockup.html)
+   exactly -- the mockup wins wherever this comment and it would otherwise
+   disagree. She must be able to tell what the manual says from what the
+   assistant says without effort: that is a difference of material here
+   (bubble vs. paper), not just typeface. */
 
 .chat {
   flex: 1;
@@ -221,131 +226,234 @@ main {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 20px 16px;
+  padding: 14px 16px 10px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 7px;
 }
 
+/* ---------- Empty state ---------- */
+
 .empty {
+  padding-top: 12px;
+}
+
+.empty-head {
+  font-family: var(--ff-display);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.empty-sub {
+  margin: 0;
   color: var(--dim);
-  font-size: var(--text-body-lg);
-  padding-top: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 42ch;
 }
 
 .starters {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .starter {
-  font-size: var(--text-body-sm);
-  color: var(--fg);
-  border: 1px solid var(--rule);
-  padding: 10px 14px;
   min-height: 44px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+  background: var(--raised);
+  border-radius: 14px;
+  box-shadow: var(--s2), var(--hi);
   text-align: left;
 }
+
+/* ---------- Her bubble ---------- */
+
+.me {
+  align-self: flex-end;
+  max-width: 80%;
+  background: var(--me);
+  color: var(--text);
+  padding: 10px 15px;
+  border-radius: 20px 20px 6px 20px;
+  font-size: 14.5px;
+  line-height: 1.48;
+  white-space: pre-wrap;
+  box-shadow: var(--s2), var(--hi);
+}
+
+/* ---------- The assistant's turn: avatar + one grouped stack ----------
+   The thinking chip, answer bubble, citations and timestamp are one visual
+   unit beside the avatar -- never four floating fragments. */
 
 .turn {
-  max-width: 100%;
+  align-self: flex-start;
+  max-width: 93%;
+  display: flex;
+  gap: 9px;
+  margin-top: 9px;
 }
 
-.turn-user {
-  align-self: flex-end;
-  max-width: 85%;
-  text-align: right;
+.avatar {
+  width: 25px;
+  height: 25px;
+  flex: none;
+  margin-top: 2px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--s1);
 }
 
-.turn-user .turn-body {
-  color: var(--dim);
-  font-size: var(--text-body-sm);
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.turn-assistant {
-  align-self: stretch;
-  text-align: left;
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
-.turn-body {
+.bot {
   margin: 0;
-  font-size: var(--text-body-lg);
-  line-height: 1.55;
+  background: var(--raised);
+  padding: 12px 15px;
+  border-radius: 6px 20px 20px 20px;
+  font-size: 14.5px;
+  line-height: 1.62;
   white-space: pre-wrap;
-}
-
-/* A readable measure for the assistant's own prose -- unconstrained, a
-   laptop-width answer runs the full viewport (~1450px), which is what
-   recurrent-training reading on a laptop actually hits. This applies to
-   the assistant's voice only: citation/manual mono text is deliberately
-   left unconstrained here, since its width is governed by the manual's
-   own layout (procedure-table columns), not by prose typesetting. */
-.turn-assistant .turn-body {
+  box-shadow: var(--s2), var(--hi);
+  /* A readable measure for the assistant's own prose -- unconstrained, a
+     laptop-width answer runs the full viewport, which is what
+     recurrent-training reading on a laptop actually hits. */
   max-width: 70ch;
 }
 
-.turn-pending {
+.stamp {
+  align-self: flex-end;
+  margin-top: -3px;
+  font-size: 10.5px;
   color: var(--dim);
 }
 
-.tool-status {
-  margin: 0 0 8px;
+/* ---------- The thinking state ---------- */
+
+.think {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  align-self: flex-start;
+  font-size: 12.5px;
   color: var(--dim);
-  font-size: var(--text-meta);
+  background: var(--sunken);
+  border-radius: 99px;
+  padding: 7px 13px;
+  box-shadow: var(--inset);
 }
+
+.crescent {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: var(--gold);
+  border-right-color: var(--gold);
+  animation: purser-think-spin 1s linear infinite;
+}
+
+@keyframes purser-think-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crescent {
+    animation: none;
+    border-color: var(--gold) transparent;
+  }
+}
+
+/* ---------- The uncited case: normal, never an error ---------- */
 
 .uncited {
-  margin: 10px 0 0;
+  margin: 0;
+  font-size: 12.5px;
   color: var(--dim);
-  font-size: var(--text-meta);
+  font-style: italic;
+  padding-left: 2px;
 }
 
 .turn-error {
-  margin: 10px 0 0;
-  font-size: var(--text-body-sm);
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text);
 }
 
-/* ---------- Citations: the one bold element ---------- */
+/* ---------- Citations: the paper extract ---------- */
 
 .citations {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 14px;
+  gap: 10px;
 }
 
-.citation {
+/* the paper extract -- the most elevated thing in the app */
+.paper {
   display: block;
   width: 100%;
   text-align: left;
-  border-left: 3px solid var(--halo);
-  padding: 4px 0 4px 14px;
+  color: var(--paper-ink);
+  background: var(--paper);
+  border-radius: 13px;
+  border-left: 3px solid var(--gold);
+  overflow: hidden;
+  box-shadow: var(--s3), var(--hi);
 }
 
-.citation-label {
-  margin: 0 0 8px;
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
-  color: var(--fg);
+.paper-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 8px;
+  /* a dashed rule under the label -- it reads as a page torn out of
+     something, not a card with a divider. */
+  border-bottom: 1px dashed var(--rule);
 }
 
-.citation-text {
+.paper-label {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-mono);
-  line-height: 1.65;
-  white-space: pre-wrap;
-  overflow-x: auto;
-  color: var(--fg);
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
 }
 
-.citation-revision {
-  margin: 10px 0 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-meta);
+.paper-open {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.paper-body {
+  padding: 10px 13px 8px;
+}
+
+.paper-rev {
+  margin: 0;
+  padding: 0 13px 10px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
   color: var(--dim);
 }
 
@@ -470,30 +578,41 @@ main {
 .composer input {
   flex: 1;
   min-width: 0;
-  background: var(--bg);
-  border: 1px solid var(--rule);
-  padding: 12px 14px;
+  background: var(--sunken);
+  border: none;
+  border-radius: 22px;
+  box-shadow: var(--inset);
+  padding: 11px 16px;
   font-size: 16px; /* >=16px avoids iOS Safari zoom-on-focus */
   min-height: 44px;
+}
+
+.composer input::placeholder {
+  color: var(--dim);
 }
 
 .composer input:disabled {
   opacity: 0.6;
 }
 
+/* The one primary action -- the single spot in the app gold is allowed to
+   fill a surface, per tokens.css's own brand note. Deliberately unchanged
+   between day and cabin: it is the app's one constant accent, not a
+   themed surface. */
 .send {
   flex: none;
   width: 44px;
   height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--text);
-  color: var(--text);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #e9d2a4, var(--gold));
+  color: #241a07;
+  box-shadow: var(--s2), 0 6px 16px -6px rgba(220, 192, 140, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .send:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: default;
 }
 
