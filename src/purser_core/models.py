@@ -79,6 +79,7 @@ class Block(BaseModel):
     kind: Literal["heading", "subheading", "para", "bullet", "step", "note", "caption", "table"]
     level: int = 0  # heading depth, or bullet/step nesting
     text: str
+    depth: int = 0  # enclosing headings -- see purser_core.outline.annotate_depth
 
 
 class PageText(BaseModel):
