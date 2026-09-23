@@ -19,8 +19,11 @@ __pycache__/
 node_modules/
 web/dist/
 
-# Env
+# Env -- the bare name only matches `.env`, so backups and per-environment
+# variants (.env.bak.*, .env.local) would otherwise be committable, keys and all.
 .env
+.env.*
+!.env.example
 
 # macOS
 .DS_Store
