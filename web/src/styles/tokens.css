@@ -1,0 +1,51 @@
+/*
+ * Design tokens from .superpowers/sdd/2026-09-22-purser/design-plan.md.
+ * Task 17 only wires up the two webfonts and the color tokens themselves --
+ * all component styling (light/cabin theme switching, layout, etc.) is
+ * Task 18's job.
+ */
+
+:root {
+  /* Color -- "the cabin at night, not a theme" */
+  --paper: #f2f5f7; /* cool white. Light mode base. */
+  --ink: #0e1826; /* desaturated navy. Text on paper; base in cabin mode. */
+  --deck: #17243a; /* raised surface in cabin mode */
+  --halo: #7be5a0; /* photoluminescent green. Citations only. Never a button. */
+  --dim: #7c8ca3; /* secondary text, tool progress, timestamps */
+  --caution: #e8a33d; /* the manual's own WARNING/CAUTION convention */
+
+  /* Type -- two voices, both functionally justified */
+  --font-ui: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  /* Scale: 15/17px body (larger than typical), 13px mono, 12px meta */
+  --text-body-sm: 15px;
+  --text-body-lg: 17px;
+  --text-mono: 13px;
+  --text-meta: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-body-sm);
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre,
+.manual-text {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+}
