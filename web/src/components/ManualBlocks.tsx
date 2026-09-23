@@ -50,6 +50,9 @@ function ManualBlock({ block }: { block: Block }) {
     case "para":
       return <p className="m-p">{text}</p>;
 
+    case "step":
+      return <p className="m-p m-step">{text}</p>;
+
     case "bullet": {
       // The parser has already stripped the bullet glyph from `text` --
       // the marker below is drawn by this renderer, not the manual's own

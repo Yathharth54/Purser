@@ -189,3 +189,69 @@ def test_no_content_is_lost_on_the_reference_pages():
             if len(words) >= 3:
                 probe = " ".join(words[:3])
                 assert probe in squashed, f"page {pdf_page} line {i} vanished: {line!r}"
+
+
+# --- headings: numbering shape, case, indent --------------------------------
+
+
+@pytest.mark.parametrize(
+    ("line", "level"),
+    [
+        ("3. ADVISORY ON INSTANCES AFFECTING SAFETY OF OPERATION", 1),
+        ("1.6         3 POINT BRIEFING", 2),
+        ("1.9           CARRIAGE OF PREGNANT LADIES", 2),
+        ("1.2. CABIN CREW DUTIES", 2),
+        ("1.46.4 PRE-FLIGHT CHECKS", 3),
+    ],
+)
+def test_numbered_upper_case_titles_are_headings_with_depth_from_the_number(line, level):
+    [b] = parse_blocks([line], [])
+    assert (b.kind, b.level) == ("heading", level)
+
+
+def test_an_indented_numbered_heading_is_still_a_heading():
+    """pdf_page 366 sets '3.   ADVISORY ...' at indent 8; indent is not what makes a heading."""
+    [b] = parse_blocks(["        3.   ADVISORY ON INSTANCES AFFECTING SAFETY OF OPERATION"], [])
+    assert b.kind == "heading"
+
+
+def test_a_numbered_lower_case_line_is_a_step_not_a_heading():
+    """pdf_page 540: '6. Latch the lavatory...' is a procedure step. Calling it a heading
+    would make it own everything after it once sections nest."""
+    out = parse_blocks(
+        [
+            "6. Latch the lavatory and mark it inoperative.",
+            "7. Monitor the lavatory at regular intervals.",
+        ],
+        [],
+    )
+    assert [(b.kind, b.text) for b in out] == [
+        ("step", "6. Latch the lavatory and mark it inoperative."),
+        ("step", "7. Monitor the lavatory at regular intervals."),
+    ]
+
+
+def test_a_table_of_contents_line_is_not_a_heading():
+    out = parse_blocks(["1.1       HANDLING OF PERSONS WITH REDUCED MOBILITY ............ 3"], [])
+    assert out[0].kind != "heading"
+
+
+def test_heading_detection_does_not_backtrack_catastrophically():
+    import time
+
+    t = time.perf_counter()
+    parse_blocks(["1." + "1" * 5000 + "x"], [])
+    assert time.perf_counter() - t < 0.5
+
+
+@needs_index
+def test_a_subsection_heading_closes_the_table_above_it():
+    """pdf_page 299: 'Table 3.5D' must stop at '1.6 3 POINT BRIEFING' -- the heading and
+    the briefing text below it are not table rows."""
+    page = Corpus("data").page(299)
+    out = parse_blocks(page.lines, page.chrome)
+    heads = [(b.text, b.level) for b in out if b.kind == "heading"]
+    assert ("1.6         3 POINT BRIEFING", 2) in heads
+    [table] = [b for b in out if b.kind == "table"]
+    assert "3 POINT BRIEFING" not in table.text
+    assert "Where: The distance" not in table.text

@@ -69,15 +69,15 @@ class Page(BaseModel):
 class Block(BaseModel):
     """One structural unit of the manual, recovered from the text layer.
 
-    `text` is verbatim for every kind EXCEPT `para`, `bullet` and `note`, where
+    `text` is verbatim for every kind EXCEPT `para`, `bullet`, `step` and `note`, where
     lines the PDF hard-wrapped are rejoined with a single space. That restores
     the sentence the author wrote; the line break at column 90 was a layout
     artifact, not meaning. `table` keeps its own newlines and leading spaces,
     because its columns ARE the information.
     """
 
-    kind: Literal["heading", "subheading", "para", "bullet", "note", "caption", "table"]
-    level: int = 0  # heading depth, or bullet nesting
+    kind: Literal["heading", "subheading", "para", "bullet", "step", "note", "caption", "table"]
+    level: int = 0  # heading depth, or bullet/step nesting
     text: str
 
 

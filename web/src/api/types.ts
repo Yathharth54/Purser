@@ -8,19 +8,29 @@
  * One structural unit of manual text, recovered from the text layer (Task
  * 6/7's parser).
  *
- * `text` is verbatim for every kind EXCEPT `para`, `bullet` and `note`,
+ * `text` is verbatim for every kind EXCEPT `para`, `bullet`, `step` and `note`,
  * where lines the PDF hard-wrapped are rejoined with a single space --
  * that restores the sentence the author wrote. `table` keeps its own
  * newlines and leading spaces, because its columns ARE the information --
  * never reflow it. `bullet`'s glyph has already been stripped server-side;
- * `level` carries its nesting depth (headings don't nest by level).
+ * `step` is a numbered procedure step and keeps its number in `text`.
+ * `level` is a heading's depth from its numbering ("1.6" is 2), or a
+ * bullet's/step's nesting from its indent.
  *
  * Render every block's `text` through `displayManualText()`
  * (`web/src/lib/manualText.ts`) so PUA glyphs the source PDF's symbol
  * fonts left behind don't show up as tofu boxes.
  */
 export interface Block {
-  kind: "heading" | "subheading" | "para" | "bullet" | "note" | "caption" | "table";
+  kind:
+    | "heading"
+    | "subheading"
+    | "para"
+    | "bullet"
+    | "step"
+    | "note"
+    | "caption"
+    | "table";
   level: number;
   text: string;
 }

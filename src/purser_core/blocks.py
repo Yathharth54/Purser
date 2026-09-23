@@ -19,13 +19,38 @@ from purser_core.models import Block
 
 # The manual's bullets are symbol-font glyphs in the Unicode private use area.
 BULLET_GLYPHS = "•"
-_NUM_HEAD = re.compile(r"^(\d+(?:\.\d+)*)\.\s+\S")
+# A numbered line: "3.", "1.6", "1.2.", "1.46.4" then a title. Written so that
+# no two quantifiers compete for the same digits -- `(?:\d+\.?)*` would
+# backtrack exponentially on a long digit run.
+_NUMBERED = re.compile(r"^(\d+\.(?:\d+\.)*\d*)\s+(\S.*)$")
+# Table-of-contents rows: dot leaders, or a trailing page range like "3-76".
+_TOC_ROW = re.compile(r"\.{5,}|\s\d+-\d+\s*$")
 _NOTE = re.compile(r"^(Note|Caution|Warning|NOTE|CAUTION|WARNING)\s*[:\-]\s*\S")
 _TABLE_CAP = re.compile(r"^Table\s+[\d.]+\s?[A-Z]{0,2}\d?\b.{0,40}$", re.IGNORECASE)
 # A line "looks like a table row" when it has an internal multi-space column
 # gap and does not open with a bullet glyph -- see the indent-drop comment
 # below for why both halves of that test matter.
 _ROW_GAP = re.compile(r"\S {3,}\S")
+
+
+def _numbered(stripped: str) -> tuple[str, int] | None:
+    """Classify a numbered line as ("heading", level) or ("step", 0).
+
+    The manual numbers two different things the same way. A heading's title is
+    set in capitals ("1.6  3 POINT BRIEFING"); a procedure step is a sentence
+    ("6. Latch the lavatory and mark it inoperative."). Measured across the
+    corpus, the capitals test separates them cleanly, where the old test --
+    a trailing dot at indent <= 2 -- missed ~630 subsection headings (no
+    trailing dot, or indented) and promoted ~200 steps to headings.
+    Level comes from the number's depth: "3." is 1, "1.6" is 2, "1.46.4" is 3.
+    """
+    m = _NUMBERED.match(stripped)
+    if not m or _TOC_ROW.search(stripped):
+        return None
+    letters = [ch for ch in m.group(2) if ch.isalpha()]
+    if len(letters) >= 3 and sum(ch.isupper() for ch in letters) / len(letters) > 0.8:
+        return "heading", m.group(1).rstrip(".").count(".") + 1
+    return "step", 0
 
 
 def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
@@ -80,10 +105,13 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             prev_len = 0
             continue
 
-        head = _NUM_HEAD.match(stripped)
-        if head and indent <= 2:
+        numbered = _numbered(stripped)
+        if numbered and numbered[0] == "heading":
+            # At any indent, and even inside a table: a heading is the one
+            # thing a table can never contain, so it is also the table's
+            # most reliable terminator.
             close_table()
-            add("heading", stripped, None, head.group(1).count(".") + 1)
+            add("heading", stripped, None, numbered[1])
             prev_len = len(raw.rstrip())
             continue
 
@@ -116,6 +144,11 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
             prev_len = len(raw.rstrip())
             continue
 
+        if numbered:
+            add("step", stripped, indent, max(0, indent // 5 - 1))
+            prev_len = len(raw.rstrip())
+            continue
+
         if _NOTE.match(stripped):
             add("note", stripped, indent)
             prev_len = len(raw.rstrip())
@@ -123,7 +156,7 @@ def parse_blocks(lines: list[str], chrome: list[int]) -> list[Block]:
 
         if out and open_indent[-1] is not None and prev_len >= full:
             prev_ind = open_indent[-1]
-            if out[-1].kind in ("bullet", "para", "note") and indent >= prev_ind:
+            if out[-1].kind in ("bullet", "step", "para", "note") and indent >= prev_ind:
                 out[-1].text = f"{out[-1].text} {stripped}".strip()
                 prev_len = len(raw.rstrip())
                 continue
