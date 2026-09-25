@@ -56,4 +56,32 @@ describe("Chat keeps her place", () => {
     expect(store["purser-thread"]).toBeUndefined();
     expect(JSON.stringify(r.toJSON())).not.toContain("brace position");
   });
+  it("keeps the saved chat when the network, not the server, failed", async () => {
+    store["purser-thread"] = "t1";
+    fetchThread.mockRejectedValue(new Error("Failed to fetch"));
+    await render();
+    expect(store["purser-thread"]).toBe("t1");
+  });
+
+  it("blocks asking until the reopened chat has loaded", async () => {
+    store["purser-thread"] = "t1";
+    let finish: (v: unknown) => void = () => {};
+    fetchThread.mockReturnValue(new Promise((res) => (finish = res)));
+    let r: ReactTestRenderer;
+    await act(async () => {
+      r = create(<Chat onOpenCitation={() => {}} />, { createNodeMock: () => ({ scrollTo() {} }) });
+    });
+    expect(r!.root.findByProps({ id: "purser-input" }).props.disabled).toBe(true);
+    await act(async () => finish([]));
+    expect(r!.root.findByProps({ id: "purser-input" }).props.disabled).toBe(false);
+  });
+
+  it("won't switch chats while an answer is still coming in", async () => {
+    streamChat.mockReturnValue(new Promise(() => {}));
+    const r = await render();
+    await act(async () => r.root.findByProps({ id: "purser-input" }).props.onChange({ target: { value: "brace" } }));
+    await act(async () => r.root.findByType("form").props.onSubmit({ preventDefault() {} }));
+    const chats = r.root.findAllByProps({ className: "bar-btn" }).find((b) => b.props.children === "Chats")!;
+    expect(chats.props.disabled).toBe(true);
+  });
 });

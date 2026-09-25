@@ -121,6 +121,9 @@ export function Chat({ onOpenCitation }: Props) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // True while the chat she was in before a refresh is being reopened: asking
+  // now would start a new chat that the reopened one then replaces on screen.
+  const [restoring, setRestoring] = useState(() => storedThread() !== null);
   const threadId = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -132,15 +135,20 @@ export function Chat({ onOpenCitation }: Props) {
   useEffect(() => () => abortRef.current?.abort(), []);
 
   async function openThread(id: string) {
+    // Never while an answer is streaming: it would land in the other chat.
+    if (busy) return;
     try {
       const messages = await fetchThread(id);
       threadId.current = id;
       storeThread(id);
       setTurns(messages.map(toTurn));
-    } catch {
-      // Pruned (the server keeps the last 100) or otherwise gone: start fresh.
-      if (threadId.current === id) threadId.current = null;
-      storeThread(null);
+    } catch (err) {
+      // Forget it only if the server says it's gone (pruned: the last 100 are
+      // kept) -- not on flaky cabin wifi, where a retry would find it again.
+      if (err instanceof Error && err.message.includes("no such thread")) {
+        if (threadId.current === id) threadId.current = null;
+        storeThread(null);
+      }
     }
     setShowHistory(false);
   }
@@ -155,13 +163,13 @@ export function Chat({ onOpenCitation }: Props) {
 
   useEffect(() => {
     const id = storedThread();
-    if (id) void openThread(id);
+    if (id) void openThread(id).finally(() => setRestoring(false));
     // Runs once on mount: reopen the chat she was in before a refresh.
   }, []);
 
   async function send(message: string) {
     const trimmed = message.trim();
-    if (!trimmed || busy) return;
+    if (!trimmed || busy || restoring) return;
 
     setInput("");
     setBusy(true);
@@ -216,7 +224,12 @@ export function Chat({ onOpenCitation }: Props) {
   return (
     <div className="chat">
       <div className="chat-bar">
-        <button type="button" className="bar-btn" onClick={() => setShowHistory((v) => !v)}>
+        <button
+          type="button"
+          className="bar-btn"
+          onClick={() => setShowHistory((v) => !v)}
+          disabled={busy}
+        >
           Chats
         </button>
         <span className="head-spacer" aria-hidden="true" />
@@ -242,7 +255,13 @@ export function Chat({ onOpenCitation }: Props) {
             </p>
             <div className="starters">
               {STARTERS.map((s) => (
-                <button key={s} type="button" className="starter" onClick={() => void send(s)}>
+                <button
+                  key={s}
+                  type="button"
+                  className="starter"
+                  onClick={() => void send(s)}
+                  disabled={restoring}
+                >
                   {s}
                 </button>
               ))}
@@ -317,7 +336,7 @@ export function Chat({ onOpenCitation }: Props) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about a procedure"
-          disabled={busy}
+          disabled={busy || restoring}
           autoComplete="off"
           enterKeyHint="send"
         />
