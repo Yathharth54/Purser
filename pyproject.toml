@@ -15,6 +15,7 @@ dependencies = [
     "sse-starlette>=2.1",
     "pillow>=11.0",
     "psycopg[binary]>=3.2",
+    "pypdfium2>=4.30",
 ]
 
 [project.optional-dependencies]

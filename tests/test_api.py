@@ -553,3 +553,12 @@ def test_a_reopened_chat_carries_when_each_message_was_sent(client, monkeypatch)
     assert [m["role"] for m in messages] == ["user", "assistant"]
     # ISO 8601 with an offset, so the phone can show it in local time
     assert all(m["created_at"].endswith("+00:00") for m in messages)
+
+
+def test_page_images_are_cached_only_by_her_own_browser(client):
+    """Images sit behind the passcode, so no shared (CDN) cache may keep them --
+    a cached copy would be served without checking the cookie."""
+    r = client.get("/api/page/600/image")
+    assert r.status_code == 200
+    cc = r.headers.get("cache-control", "")
+    assert "private" in cc and "max-age=" in cc

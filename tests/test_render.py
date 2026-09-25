@@ -1,8 +1,14 @@
+"""Page images are rendered on demand from the PDF, in-process (pypdfium2).
+
+No poppler binary: Vercel's runtime can't install system packages, and a
+pip-installed renderer works the same on this Mac, in Docker and on Vercel.
+"""
+
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
+import pypdfium2 as pdfium
 import pytest
 from PIL import Image
 
@@ -15,55 +21,46 @@ def var_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
-def _stub_pdftoppm(monkeypatch, calls: list | None = None):
-    """Fakes pdftoppm by dropping a tiny real PNG next to the requested stem."""
-
-    def fake_run(cmd, check, capture_output):  # noqa: ARG001 - signature must match the real call
-        if calls is not None:
-            calls.append(cmd)
-        stem = Path(cmd[-1])
-        Image.new("RGB", (4, 4)).save(stem.with_suffix(".png"))
-
-    monkeypatch.setattr("purser_ingest.render.subprocess.run", fake_run)
-
-
-def test_render_page_names_the_cache_file_by_page_number(var_dir, monkeypatch):
-    _stub_pdftoppm(monkeypatch)
-    out = render_page(Path("dummy.pdf"), 7)
-    assert out == var_dir / "pagecache" / "p0007.webp"
-    assert out.is_file()
+@pytest.fixture
+def pdf(tmp_path) -> Path:
+    """A real 3-page PDF; page 2 is landscape, so page numbering is checkable."""
+    doc = pdfium.PdfDocument.new()
+    doc.new_page(612, 792)
+    doc.new_page(792, 612)
+    doc.new_page(612, 792)
+    path = tmp_path / "tiny.pdf"
+    doc.save(path)
+    return path
 
 
-def test_render_page_caches_and_only_shells_out_once(var_dir, monkeypatch):
-    """A second call for the same page must hit the on-disk cache.
-
-    Kills the mutant that drops the `if out.is_file(): return out` guard --
-    without it, every request for an already-rendered page would re-invoke
-    pdftoppm, defeating the whole point of caching.
-    """
-    calls: list = []
-    _stub_pdftoppm(monkeypatch, calls)
-
-    first = render_page(Path("dummy.pdf"), 42)
-    second = render_page(Path("dummy.pdf"), 42)
-
-    assert first == second
-    assert len(calls) == 1
+def test_renders_the_requested_page_to_webp(var_dir, pdf):
+    out = render_page(pdf, 2, dpi=72)
+    assert out == var_dir / "pagecache" / "p0002.webp"
+    with Image.open(out) as im:
+        assert im.format == "WEBP"
+        assert im.size == (792, 612)  # page 2, the landscape one, at 72 dpi
 
 
-def test_render_page_removes_the_intermediate_png(var_dir, monkeypatch):
-    """Kills the mutant that drops `png.unlink(missing_ok=True)`, which would
-    leave a duplicate, uncompressed PNG behind for every page ever rendered.
-    """
-    _stub_pdftoppm(monkeypatch)
-    out = render_page(Path("dummy.pdf"), 3)
-    assert not out.with_suffix(".png").exists()
+def test_resolution_follows_dpi(var_dir, pdf):
+    with Image.open(render_page(pdf, 1, dpi=144)) as im:
+        assert im.size == (1224, 1584)
 
 
-def test_render_page_propagates_pdftoppm_failure(var_dir, monkeypatch):
-    def fake_run(cmd, check, capture_output):
-        raise subprocess.CalledProcessError(1, cmd)
+def test_a_rendered_page_is_served_from_the_cache(var_dir, pdf, monkeypatch):
+    first = render_page(pdf, 3, dpi=72)
+    opened = []
+    monkeypatch.setattr(pdfium, "PdfDocument", lambda *a, **k: opened.append(a) or None)
+    assert render_page(pdf, 3, dpi=72) == first
+    assert opened == []
 
-    monkeypatch.setattr("purser_ingest.render.subprocess.run", fake_run)
-    with pytest.raises(subprocess.CalledProcessError):
-        render_page(Path("dummy.pdf"), 999)
+
+def test_a_page_beyond_the_document_raises(var_dir, pdf):
+    with pytest.raises((IndexError, ValueError)):
+        render_page(pdf, 9, dpi=72)
+
+
+def test_rendering_needs_no_poppler_binary(var_dir, pdf, monkeypatch):
+    """Vercel's runtime has no pdftoppm; rendering must not shell out at all."""
+    monkeypatch.setenv("PATH", "")
+    with Image.open(render_page(pdf, 1, dpi=72)) as im:
+        assert im.size == (612, 792)
