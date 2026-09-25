@@ -36,10 +36,14 @@ export interface Block {
     | "step"
     | "note"
     | "caption"
-    | "table";
+    | "table"
+    | "toc";
   level: number;
   text: string;
   depth?: number;
+  /** `toc` only: the entry's numbering ("2.1") and the page in its section. */
+  number?: string | null;
+  page?: number | null;
 }
 
 /**

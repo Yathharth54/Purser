@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ManualBlocks } from "./ManualBlocks";
 import type { Block } from "../api/types";
@@ -21,6 +21,10 @@ const BULLET: Block = {
 };
 const NOTE: Block = { kind: "note", level: 0, text: "Note: Kindly refer to PART THREE for details" };
 const CAPTION: Block = { kind: "caption", level: 0, text: "Table 4.2B" };
+
+/** A static heading's markup: its number hung apart, its title recased. */
+const h = (num: string, title: string) =>
+  `<span class="m-h-row"><span class="m-h-num">${num}</span><span class="m-h-title">${title}</span></span>`;
 
 // pdf page 552, §4.2 -- a real two-column safety table. Leading spaces and
 // embedded newlines are the only thing pairing a command to the cabin crew
@@ -84,7 +88,8 @@ describe("ManualBlocks", () => {
       expect(html).toContain(`class="${cls}"`);
     }
 
-    expect(heading?.inner).toContain("CREW RESPONSIBILTIES");
+    // Headings are recased for display; the manual's typo is kept as printed.
+    expect(heading?.inner).toContain("Crew Responsibilties");
     expect(subheading?.inner).toContain("SECTION 4.4");
     expect(para?.inner).toContain("Suspected burning smell");
     expect(bullet?.inner).toContain("move passengers away");
@@ -106,7 +111,7 @@ describe("ManualBlocks", () => {
 
   it("reaches the DOM with the bullet's nesting level, at a shallow and a deep level", () => {
     const html = renderToStaticMarkup(<ManualBlocks blocks={[BULLET_LV1, BULLET_LV7]} />);
-    const styleAttrs = [...html.matchAll(/<div class="m-li" style="([^"]*)"/g)].map((m) => m[1]);
+    const styleAttrs = [...html.matchAll(/<div class="m-li[^"]*" style="([^"]*)"/g)].map((m) => m[1]);
     expect(styleAttrs).toHaveLength(2);
     expect(styleAttrs[0]).toContain("--lv:1");
     expect(styleAttrs[1]).toContain("--lv:7");
@@ -144,9 +149,9 @@ describe("ManualBlocks", () => {
         ]}
       />,
     );
-    expect(html).toContain('<h3 class="m-h">1. GENERAL</h3>');
-    expect(html).toContain('<h4 class="m-h m-h2">1.1 SMOKE</h4>');
-    expect(html).toContain('<h5 class="m-h m-h3">1.1.1 OVEN</h5>');
+    expect(html).toContain(`<h3 class="m-h">${h("1", "General")}</h3>`);
+    expect(html).toContain(`<h4 class="m-h m-h2">${h("1.1", "Smoke")}</h4>`);
+    expect(html).toContain(`<h5 class="m-h m-h3">${h("1.1.1", "Oven")}</h5>`);
   });
 
   it("nests the blocks a heading owns inside that heading's section", () => {
@@ -163,13 +168,13 @@ describe("ManualBlocks", () => {
     );
     expect(html).toBe(
       '<div class="manual-blocks">' +
-        '<div class="m-sec" data-depth="0"><h3 class="m-h">1. GENERAL</h3><div class="m-sec-body">' +
+        `<div class="m-sec" data-depth="0"><h3 class="m-h">${h("1", "General")}</h3><div class="m-sec-body">` +
         '<p class="m-p">intro</p>' +
-        '<div class="m-sec" data-depth="1"><h4 class="m-h m-h2">1.1 SMOKE</h4><div class="m-sec-body">' +
+        `<div class="m-sec" data-depth="1"><h4 class="m-h m-h2">${h("1.1", "Smoke")}</h4><div class="m-sec-body">` +
         '<p class="m-p">inner</p>' +
         "</div></div>" +
         "</div></div>" +
-        '<div class="m-sec" data-depth="0"><h3 class="m-h">2. CREW</h3><div class="m-sec-body"></div></div>' +
+        `<div class="m-sec" data-depth="0"><h3 class="m-h">${h("2", "Crew")}</h3><div class="m-sec-body"></div></div>` +
         "</div>",
     );
   });
@@ -237,5 +242,73 @@ describe("ManualBlocks", () => {
   it("renders an empty blocks array without throwing", () => {
     expect(() => renderToStaticMarkup(<ManualBlocks blocks={[]} />)).not.toThrow();
     expect(renderToStaticMarkup(<ManualBlocks blocks={[]} />)).toBe('<div class="manual-blocks"></div>');
+  });
+
+  it("draws a contents page as one card of entries, without its dot leaders", () => {
+    const toc = (number: string, text: string, page: number, level = 1): Block => ({
+      kind: "toc", level, text, number, page,
+    });
+    const blocks: Block[] = [
+      { kind: "subheading", level: 0, text: "TABLE OF CONTENTS" },
+      toc("1", "GENERAL", 5),
+      toc("1.1", "RAPID/EXPLOSIVE DECOMPRESSION", 7, 2),
+      toc("2", "CREW RESPONSIBILTIES", 11),
+    ];
+    const html = renderToStaticMarkup(<ManualBlocks blocks={blocks} />);
+    expect(html.match(/class="m-toc"/g)).toHaveLength(1);
+    expect(html).toContain("3 topics");
+    expect(html).not.toContain("TABLE OF CONTENTS"); // the card's own title replaces it
+    expect(html).toContain("Rapid/Explosive Decompression");
+    expect(html).toContain("p. 7");
+    // No reader to jump in (a citation card): plain rows, not buttons.
+    expect(html).not.toContain('<button type="button" class="m-toc-row"');
+  });
+
+  it("makes each contents entry a link to its page in the section reader", async () => {
+    const { act, create } = await import("react-test-renderer");
+    const onJump = vi.fn();
+    const blocks: Block[] = [{ kind: "toc", level: 1, text: "BRACE POSITIONS", number: "5", page: 12 }];
+    let r: ReturnType<typeof create>;
+    act(() => {
+      r = create(<ManualBlocks blocks={blocks} onJumpToPage={onJump} />);
+    });
+    act(() => r!.root.findByProps({ className: "m-toc-row" }).props.onClick());
+    expect(onJump).toHaveBeenCalledWith(12);
+    act(() => r!.root.findByProps({ className: "m-toc-head" }).props.onClick());
+    expect(r!.root.findAllByProps({ className: "m-toc-row" })).toHaveLength(0);
+  });
+
+  it("sets a lead-in label apart from a paragraph", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks
+        blocks={[
+          { kind: "para", level: 0, text: "Seating:" },
+          { kind: "para", level: 0, text: "requirements stated are:" },
+        ]}
+      />,
+    );
+    expect(html).toContain('<p class="m-label">Seating:</p>');
+    expect(html).toContain('<p class="m-p">requirements stated are:</p>');
+  });
+
+  it("draws a fill-in blank as a line to fill, not underscores", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks blocks={[{ kind: "para", level: 0, text: "Mera naam _______________ hai." }]} />,
+    );
+    expect(html).not.toContain("___");
+    expect(html).toContain('Mera naam <span class="m-blank" role="img" aria-label="blank to fill in"></span> hai.');
+  });
+
+  it("marks a sub-bullet apart from its parent bullet", () => {
+    const html = renderToStaticMarkup(
+      <ManualBlocks
+        blocks={[
+          { kind: "bullet", level: 0, text: "subject to the" },
+          { kind: "bullet", level: 1, text: "Availability of oxygen masks" },
+        ]}
+      />,
+    );
+    expect(html).toContain('<div class="m-li" style="--lv:0">');
+    expect(html).toContain('<div class="m-li m-li-sub" style="--lv:1">');
   });
 });

@@ -877,11 +877,32 @@ main {
 
 .m-h {
   font-family: var(--ff-display);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  margin: 14px 0 7px;
-  letter-spacing: 0.01em;
+  line-height: 1.15;
+  margin: 16px 0 7px;
   color: var(--text);
+}
+
+/* The manual's own number hangs in a column of its own, so titles align. */
+.m-h-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.m-h-num {
+  flex: none;
+  min-width: 26px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.m-h-title {
+  min-width: 0;
 }
 
 .m-h:first-child {
@@ -892,12 +913,12 @@ main {
    the mockup's 20px display face, "1.6" and "1.46.4" step down in the same
    family so the hierarchy is legible at a glance. */
 .m-h2 {
-  font-size: 16px;
+  font-size: 17px;
   margin: 12px 0 6px;
 }
 
 .m-h3 {
-  font-size: 14px;
+  font-size: 15px;
   margin: 10px 0 5px;
 }
 
@@ -919,7 +940,7 @@ main {
   box-sizing: border-box;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   cursor: pointer;
 }
@@ -986,6 +1007,141 @@ main {
   border-radius: 50%;
   background: var(--gold);
   margin-top: 8px;
+}
+
+/* A sub-bullet (the manual's Word "o" items): a ring under the dot. */
+.m-li-sub i {
+  background: none;
+  border: 1.3px solid var(--accent);
+}
+
+/* A lead-in label ("Seating:") introduces the lines under it. */
+.m-label {
+  margin: 14px 0 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* A fill-in blank in an announcement ("Mera naam ____ hai"). */
+.m-blank {
+  display: inline-block;
+  width: 4.5em;
+  height: 1em;
+  margin: 0 2px;
+  vertical-align: -3px;
+  border-bottom: 1.5px solid var(--accent);
+}
+
+/* A section's printed contents page, as a card of links to its pages. */
+.m-toc {
+  margin: 4px 0 14px;
+  background: var(--raised);
+  border-radius: 14px;
+  box-shadow: var(--s1), var(--hi);
+  overflow: hidden;
+}
+
+.m-toc-head {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 14px 10px;
+  cursor: pointer;
+}
+
+.m-toc-head:focus-visible,
+.m-toc-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.m-toc-title {
+  flex: 1;
+  font-family: var(--ff-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.m-toc-count {
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--dim);
+}
+
+.m-toc-head i {
+  flex: none;
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--dim);
+  border-bottom: 1.5px solid var(--dim);
+  transform: translateY(2px) rotate(-135deg);
+  transition: transform 0.15s ease;
+}
+
+.m-toc-head[aria-expanded="false"] i {
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.m-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.m-toc-list li + li {
+  border-top: 1px solid var(--hair);
+}
+
+.m-toc-row {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 12px 11px calc(14px + var(--lv, 0) * 14px);
+  text-align: left;
+  color: var(--text);
+}
+
+.m-toc-num {
+  flex: none;
+  min-width: 2.2em;
+  font-family: var(--ff-mono);
+  font-size: 11.5px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.m-toc-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.m-toc-page {
+  flex: none;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.m-toc-row i {
+  flex: none;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--dim);
+  border-bottom: 1.5px solid var(--dim);
+  transform: rotate(-45deg);
 }
 
 /* A numbered procedure step: the manual's own number hung in its column. */
