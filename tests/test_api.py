@@ -562,3 +562,14 @@ def test_page_images_are_cached_only_by_her_own_browser(client):
     assert r.status_code == 200
     cc = r.headers.get("cache-control", "")
     assert "private" in cc and "max-age=" in cc
+
+
+def test_a_renderer_error_is_503_not_500(client, monkeypatch):
+    """pypdfium2 raises PdfiumError (a RuntimeError) on a bad PDF or page."""
+    import purser_api.routers.manual as manual_mod
+
+    def _raise(*a, **k):
+        raise RuntimeError("Failed to load page.")
+
+    monkeypatch.setattr(manual_mod, "render_page", _raise)
+    assert client.get("/api/page/600/image").status_code == 503

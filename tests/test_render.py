@@ -64,3 +64,31 @@ def test_rendering_needs_no_poppler_binary(var_dir, pdf, monkeypatch):
     monkeypatch.setenv("PATH", "")
     with Image.open(render_page(pdf, 1, dpi=72)) as im:
         assert im.size == (612, 792)
+
+
+def test_concurrent_renders_do_not_corrupt_each_other(var_dir, tmp_path):
+    """PDFium is not thread-safe, and FastAPI runs the image endpoint in a
+    threadpool: two citations tapped together used to fail with PdfiumError
+    ("Data format error") or a missing temp file."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    doc = pdfium.PdfDocument.new()
+    for _ in range(6):
+        doc.new_page(612, 792)
+    pdf = tmp_path / "six.pdf"
+    doc.save(pdf)
+
+    errors = []
+
+    def one(n: int) -> None:
+        try:
+            render_page(pdf, n, dpi=36)
+        except Exception as e:  # noqa: BLE001 -- any failure here is the bug
+            errors.append(type(e).__name__)
+
+    for _ in range(5):
+        for f in (var_dir / "pagecache").glob("*.webp") if (var_dir / "pagecache").exists() else []:
+            f.unlink()
+        with ThreadPoolExecutor(12) as pool:
+            list(pool.map(one, [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]))
+    assert errors == []

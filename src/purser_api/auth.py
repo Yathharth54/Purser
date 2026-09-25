@@ -15,14 +15,26 @@ import asyncio
 import hashlib
 import hmac
 import os
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import delete, func
+from sqlmodel import select
+
+from purser_api.db import LoginFailure, session
 
 COOKIE = "purser_session"
 OPEN = {"/api/health", "/api/session", "/api/login"}
+# Not under /api, but they map every endpoint and name the manual.
+_DOCS = {"/docs", "/docs/oauth2-redirect", "/redoc", "/openapi.json"}
 WRONG_PASSCODE_DELAY = 1.0  # seconds; slows guessing (tests set it to 0)
+# Parallel requests defeat a per-request delay, so wrong guesses are also
+# counted in the database -- shared by every instance -- and past this many in
+# FAILURE_WINDOW, all logins pause until the window clears.
+MAX_FAILURES = 10
+FAILURE_WINDOW = timedelta(minutes=15)
 _ONE_YEAR = 365 * 24 * 3600
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -43,10 +55,22 @@ def is_authenticated(request: Request) -> bool:
     return hmac.compare_digest(request.cookies.get(COOKIE, ""), _token(passcode))
 
 
+def _route_path(request: Request) -> str:
+    """The path Starlette routes on: scope["path"] with any root_path removed.
+
+    Checking the raw path would let `/prefix/api/toc` slip past the gate
+    whenever the app is mounted under a prefix, yet still reach the route.
+    """
+    path, root = request.scope["path"], request.scope.get("root_path", "")
+    return path[len(root) :] or "/" if root and path.startswith(root) else path
+
+
 async def gate(request: Request, call_next):
-    """HTTP middleware: close every non-open /api route without a session."""
-    path = request.url.path
-    if path.startswith("/api/") and path not in OPEN and not is_authenticated(request):
+    """HTTP middleware: close every non-open /api route (and the API docs)
+    without a session."""
+    path = _route_path(request)
+    closed = (path.startswith("/api/") and path not in OPEN) or path in _DOCS
+    if closed and not is_authenticated(request):
         return JSONResponse({"detail": "passcode required"}, status_code=401)
     return await call_next(request)
 
@@ -65,9 +89,20 @@ async def login(body: Login, request: Request, response: Response):
     passcode = _passcode()
     if not passcode:
         return {"ok": True}
-    if not hmac.compare_digest(body.passcode.encode(), passcode.encode()):
-        await asyncio.sleep(WRONG_PASSCODE_DELAY)
-        return JSONResponse({"detail": "wrong passcode"}, status_code=401)
+    since = datetime.now(UTC) - FAILURE_WINDOW
+    with session() as s:
+        recent = s.exec(select(func.count()).where(LoginFailure.at >= since)).one()
+        if recent >= MAX_FAILURES:
+            return JSONResponse(
+                {"detail": "too many wrong passcodes; try again in 15 minutes"}, status_code=429
+            )
+        if not hmac.compare_digest(body.passcode.encode(), passcode.encode()):
+            s.add(LoginFailure())
+            # Keep the table tiny: anything older than a day is irrelevant.
+            s.exec(delete(LoginFailure).where(LoginFailure.at < since - timedelta(days=1)))
+            s.commit()
+            await asyncio.sleep(WRONG_PASSCODE_DELAY)
+            return JSONResponse({"detail": "wrong passcode"}, status_code=401)
     response.set_cookie(
         COOKIE,
         _token(passcode),

@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 import os
+import threading
+import uuid
 from pathlib import Path
+
+# PDFium is not thread-safe -- not even across different documents -- and the
+# image endpoint runs in FastAPI's threadpool. Two citations opened together
+# used to fail with "Data format error" (or worse, crash the process). Renders
+# are fast (~0.3 s), so one at a time costs nothing noticeable.
+_PDFIUM = threading.Lock()
 
 
 def _cache_dir() -> Path:
@@ -25,16 +33,20 @@ def render_page(pdf: Path, pdf_page: int, dpi: int = 150) -> Path:
 
     import pypdfium2 as pdfium
 
-    doc = pdfium.PdfDocument(pdf)
-    try:
-        if not 1 <= pdf_page <= len(doc):
-            raise IndexError(f"page {pdf_page} is outside 1..{len(doc)}")
-        image = doc[pdf_page - 1].render(scale=dpi / 72).to_pil()
-    finally:
-        doc.close()
+    with _PDFIUM:
+        if out.is_file():  # rendered by another request while this one waited
+            return out
+        doc = pdfium.PdfDocument(pdf)
+        try:
+            if not 1 <= pdf_page <= len(doc):
+                raise IndexError(f"page {pdf_page} is outside 1..{len(doc)}")
+            image = doc[pdf_page - 1].render(scale=dpi / 72).to_pil()
+        finally:
+            doc.close()
 
-    # Write-then-rename, so a half-written file is never served from the cache.
-    tmp = out.with_suffix(".tmp")
+    # Write-then-rename, so a half-written file is never served from the cache;
+    # a unique temp name, so two writers of one page never clobber each other.
+    tmp = out.with_suffix(f".{uuid.uuid4().hex}.tmp")
     image.save(tmp, "WEBP", quality=80, method=4)
     tmp.replace(out)
     return out

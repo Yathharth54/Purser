@@ -76,6 +76,13 @@ class Message(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now, sa_type=_TZ)
 
 
+class LoginFailure(SQLModel, table=True):
+    """One wrong passcode attempt. Counted across all instances to pause logins."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    at: datetime = Field(default_factory=_now, sa_type=_TZ, sa_column_kwargs={"index": True})
+
+
 def _var_dir() -> Path:
     return Path(os.environ.get("PURSER_VAR_DIR", "var"))
 
@@ -94,7 +101,8 @@ def database_url() -> str:
 
 def max_threads() -> int:
     """How many chats to keep. The least recently used beyond this are pruned."""
-    return int(os.environ.get("PURSER_MAX_THREADS", "100"))
+    # At least 1: pruning to 0 would delete the chat being started.
+    return max(1, int(os.environ.get("PURSER_MAX_THREADS", "100")))
 
 
 def prune_threads(s: Session, keep: int) -> int:

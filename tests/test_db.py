@@ -119,3 +119,12 @@ def test_pruning_keeps_the_most_recently_used_chats_and_their_messages(isolated_
         assert removed == 2
         assert sorted(t.id for t in s.exec(select(Thread)).all()) == ["t2", "t3", "t4"]
         assert sorted(m.body for m in s.exec(select(Message)).all()) == ["q2", "q3", "q4"]
+
+
+@pytest.mark.parametrize("value", ["0", "-5"])
+def test_the_chat_limit_never_drops_below_one(monkeypatch, value):
+    """Pruning to 0 would delete the chat being started, failing every new chat."""
+    from purser_api.db import max_threads
+
+    monkeypatch.setenv("PURSER_MAX_THREADS", value)
+    assert max_threads() == 1

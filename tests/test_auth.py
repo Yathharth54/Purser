@@ -74,3 +74,45 @@ def test_without_a_passcode_configured_the_app_is_open(tmp_path, monkeypatch):
         assert c.get("/api/toc").status_code == 200
         assert c.get("/api/session").json() == {"authenticated": True, "required": False}
     reset_engine()
+
+
+@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+def test_the_api_docs_are_closed_too(locked, path):
+    """They expose no data, but they map every endpoint and name the manual."""
+    assert locked.get(path).status_code == 401
+
+
+def test_the_gate_checks_the_path_the_app_actually_routes_on(tmp_path, monkeypatch):
+    """Mounted under a prefix (root_path), /prefix/api/toc must still be gated."""
+    monkeypatch.setenv("PURSER_VAR_DIR", str(tmp_path))
+    monkeypatch.setenv("PURSER_PASSCODE", PASS)
+    reset_engine()
+    from purser_api.main import app
+
+    with TestClient(app, root_path="/prefix") as c:
+        assert c.get("/prefix/api/toc").status_code == 401
+    reset_engine()
+
+
+def test_repeated_wrong_guesses_pause_all_logins(locked, monkeypatch):
+    """Parallel requests defeat a per-request delay, so failures are counted in
+    the database -- shared by every instance -- and logins pause past a limit."""
+    monkeypatch.setattr("purser_api.auth.MAX_FAILURES", 3)
+    for _ in range(3):
+        assert locked.post("/api/login", json={"passcode": "nope"}).status_code == 401
+    r = locked.post("/api/login", json={"passcode": PASS})
+    assert r.status_code == 429
+    assert "purser_session" not in r.cookies
+
+
+def test_old_wrong_guesses_stop_counting(locked, monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    from purser_api.db import LoginFailure, session
+
+    monkeypatch.setattr("purser_api.auth.MAX_FAILURES", 3)
+    with session() as s:
+        for _ in range(5):
+            s.add(LoginFailure(at=datetime.now(UTC) - timedelta(hours=2)))
+        s.commit()
+    assert locked.post("/api/login", json={"passcode": PASS}).status_code == 200
