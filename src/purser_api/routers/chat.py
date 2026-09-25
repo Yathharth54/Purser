@@ -4,7 +4,6 @@ import json
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException
-from pydantic_ai import AgentRunResultEvent, FunctionToolCallEvent
 from sqlmodel import select
 from sse_starlette.sse import EventSourceResponse
 
@@ -111,6 +110,9 @@ async def chat(req: ChatRequest) -> EventSourceResponse:
         # that just stops is not, and the client cannot tell them apart
         # unless every failure path is guarded the same way.
         try:
+            # Imported here, not at module load: see purser_api.deps.
+            from pydantic_ai import AgentRunResultEvent, FunctionToolCallEvent
+
             agent, deps = get_agent(), get_deps()
             output = None
             async with agent.run_stream_events(prompt, deps=deps) as stream:
