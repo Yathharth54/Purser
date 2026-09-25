@@ -3,7 +3,9 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 const { fetchSession } = vi.hoisted(() => ({ fetchSession: vi.fn() }));
 vi.mock("./api/client", () => ({ fetchSession, login: vi.fn(), LOCKED_EVENT: "purser:locked" }));
-vi.mock("./components/Chat", () => ({ Chat: () => <p>CHAT</p> }));
+vi.mock("./components/Chat", () => ({
+  Chat: ({ chatsOpen }: { chatsOpen: boolean }) => <p>{chatsOpen ? "CHAT+PANEL" : "CHAT"}</p>,
+}));
 vi.mock("./components/TocBrowser", () => ({ TocBrowser: () => <p>TOC</p> }));
 vi.mock("./components/PageDrawer", () => ({ PageDrawer: () => null }));
 const listeners: Record<string, () => void> = {};
@@ -61,5 +63,23 @@ describe("App passcode gate", () => {
     expect(text).not.toContain("CHAT");
     await act(async () => wake({ authenticated: true, required: true }));
     act(() => r!.unmount());
+  });
+
+  it("opens her chats from the header, switching back to Ask from Manual", async () => {
+    fetchSession.mockResolvedValue({ authenticated: true, required: true });
+    const r = await render();
+    await act(async () => r.root.findByProps({ id: "tab-manual" }).props.onClick());
+    const chats = r.root.findByProps({ "aria-label": "Your chats" });
+    expect(chats.props["aria-expanded"]).toBe(false);
+    await act(async () => chats.props.onClick());
+    expect(r.root.findByProps({ id: "tab-chat" }).props["aria-selected"]).toBe(true);
+    expect(r.root.findByProps({ "aria-label": "Your chats" }).props["aria-expanded"]).toBe(true);
+    expect(JSON.stringify(r.toJSON())).toContain("CHAT+PANEL");
+  });
+
+  it("has no chats button behind the passcode screen", async () => {
+    fetchSession.mockResolvedValue({ authenticated: false, required: true });
+    const r = await render();
+    expect(r.root.findAllByProps({ "aria-label": "Your chats" })).toHaveLength(0);
   });
 });

@@ -37,11 +37,19 @@ export default function App() {
   const [tab, setTab] = useState<"chat" | "manual">("chat");
   const [seenManual, setSeenManual] = useState(false);
   const [citation, setCitation] = useState<Citation | null>(null);
+  const [chatsOpen, setChatsOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>(loadTheme);
   // "checking" until the server says whether this device holds a session.
   const [access, setAccess] = useState<"checking" | "locked" | "open">("checking");
   const chatTabRef = useRef<HTMLButtonElement>(null);
   const manualTabRef = useRef<HTMLButtonElement>(null);
+
+  // Chats belong to Ask: opening them from the Manual tab goes back there,
+  // so the chat she picks is on screen when the panel closes.
+  function openChats() {
+    selectTab("chat");
+    setChatsOpen(true);
+  }
 
   function selectTab(next: "chat" | "manual") {
     if (next === "manual") setSeenManual(true);
@@ -92,16 +100,44 @@ export default function App() {
     <div className="app">
       <header className="app-head">
         <div className="head-row">
+          {access === "open" ? (
+            <button
+              type="button"
+              className="head-btn"
+              onClick={openChats}
+              aria-label="Your chats"
+              aria-haspopup="dialog"
+              aria-expanded={chatsOpen}
+            >
+              <span className="head-btn-chip" aria-hidden="true">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+                  <path d="M9.5 4.5v15" />
+                </svg>
+              </span>
+            </button>
+          ) : (
+            // Holds the left slot so the wordmark stays centred behind the lock.
+            <span className="head-btn" aria-hidden="true" />
+          )}
           <Wordmark />
-          <span className="head-spacer" aria-hidden="true" />
           <button
             type="button"
-            className="theme-toggle"
+            className="head-btn"
             onClick={() => setTheme((t) => (t === "day" ? "cabin" : "day"))}
             aria-label={theme === "day" ? "Switch to cabin reading mode" : "Switch to day mode"}
           >
-            <span className="theme-toggle-icon" aria-hidden="true">
-              {theme === "day" ? "☾" : "☀"}
+            <span className="head-btn-chip" aria-hidden="true">
+              {theme === "day" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a6.6 6.6 0 0 0 10 10Z" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+                </svg>
+              )}
             </span>
           </button>
         </div>
@@ -174,7 +210,11 @@ export default function App() {
               aria-labelledby="tab-chat"
               style={{ display: tab === "chat" ? "flex" : "none" }}
             >
-              <Chat onOpenCitation={setCitation} />
+              <Chat
+                onOpenCitation={setCitation}
+                chatsOpen={chatsOpen}
+                onCloseChats={() => setChatsOpen(false)}
+              />
             </div>
             <div
               className="pane"

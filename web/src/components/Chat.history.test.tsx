@@ -14,7 +14,7 @@ const { Chat } = await import("./Chat");
 async function render(): Promise<ReactTestRenderer> {
   let r: ReactTestRenderer;
   await act(async () => {
-    r = create(<Chat onOpenCitation={() => {}} />, { createNodeMock: () => ({ scrollTo() {} }) });
+    r = create(<Chat onOpenCitation={() => {}} chatsOpen={false} onCloseChats={() => {}} />, { createNodeMock: () => ({ scrollTo() {} }) });
   });
   await act(async () => {});
   return r!;
@@ -52,10 +52,22 @@ describe("Chat keeps her place", () => {
       { role: "user", body: "brace position", citations: [], created_at: "2026-09-25T10:00:00+00:00" },
     ]);
     const r = await render();
-    await act(async () => r.root.findByProps({ className: "bar-btn new" }).props.onClick());
+    await act(async () => r.root.findByProps({ className: "chats-new" }).props.onClick());
     expect(store["purser-thread"]).toBeUndefined();
     expect(JSON.stringify(r.toJSON())).not.toContain("brace position");
   });
+
+  it("closes the chats panel once she picks a chat", async () => {
+    fetchThread.mockResolvedValue([]);
+    const onCloseChats = vi.fn();
+    const r = await render();
+    await act(async () =>
+      r.update(<Chat onOpenCitation={() => {}} chatsOpen={false} onCloseChats={onCloseChats} />),
+    );
+    await act(async () => r.root.findByProps({ className: "chats-new" }).props.onClick());
+    expect(onCloseChats).toHaveBeenCalled();
+  });
+
   it("keeps the saved chat when the network, not the server, failed", async () => {
     store["purser-thread"] = "t1";
     fetchThread.mockRejectedValue(new Error("Failed to fetch"));
@@ -69,7 +81,7 @@ describe("Chat keeps her place", () => {
     fetchThread.mockReturnValue(new Promise((res) => (finish = res)));
     let r: ReactTestRenderer;
     await act(async () => {
-      r = create(<Chat onOpenCitation={() => {}} />, { createNodeMock: () => ({ scrollTo() {} }) });
+      r = create(<Chat onOpenCitation={() => {}} chatsOpen={false} onCloseChats={() => {}} />, { createNodeMock: () => ({ scrollTo() {} }) });
     });
     expect(r!.root.findByProps({ id: "purser-input" }).props.disabled).toBe(true);
     await act(async () => finish([]));
@@ -81,7 +93,6 @@ describe("Chat keeps her place", () => {
     const r = await render();
     await act(async () => r.root.findByProps({ id: "purser-input" }).props.onChange({ target: { value: "brace" } }));
     await act(async () => r.root.findByType("form").props.onSubmit({ preventDefault() {} }));
-    const chats = r.root.findAllByProps({ className: "bar-btn" }).find((b) => b.props.children === "Chats")!;
-    expect(chats.props.disabled).toBe(true);
+    expect(r.root.findByProps({ className: "chats-new" }).props.disabled).toBe(true);
   });
 });
