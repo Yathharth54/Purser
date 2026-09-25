@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from purser_api import auth
 from purser_api.db import engine
 from purser_api.routers import chat, manual
 
@@ -40,6 +41,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# The passcode gate (see purser_api.auth). Added last, so it runs outermost:
+# a locked request is refused before any route or other middleware sees it.
+app.middleware("http")(auth.gate)
+
+app.include_router(auth.router)
 app.include_router(manual.router)
 app.include_router(chat.router)
 
