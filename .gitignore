@@ -34,3 +34,7 @@ web/*.tsbuildinfo
 
 # embedding model baked in at Vercel build time
 .models/
+.env*
+
+# The controlled manual, bundled into Vercel deploys -- never commit it.
+.manual/
