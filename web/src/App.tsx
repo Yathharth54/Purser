@@ -143,6 +143,15 @@ export default function App() {
         )}
       </header>
 
+      {access === "checking" && (
+        <main>
+          {/* The server may be waking up (a cold start takes a few seconds). */}
+          <p className="opening" role="status">
+            Opening the manual…
+          </p>
+        </main>
+      )}
+
       {access === "locked" && (
         <main>
           <PasscodeGate onUnlock={() => setAccess("open")} />

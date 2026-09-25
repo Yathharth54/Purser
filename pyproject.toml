@@ -38,6 +38,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/purser_core", "src/purser_ingest", "src/purser_agent", "src/purser_api"]
 
+[tool.vercel.fastapi.static]
+# Serve the PWA shell from Vercel's CDN even though the app has middleware (the
+# passcode gate). It holds no manual content, and otherwise every first visit
+# waits for a cold function just to fetch index.html.
+cdn = true
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]

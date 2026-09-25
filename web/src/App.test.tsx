@@ -49,4 +49,17 @@ describe("App passcode gate", () => {
     await act(async () => listeners["purser:locked"]!());
     expect(JSON.stringify(r.toJSON())).toContain("Enter passcode");
   });
+  it("says it's opening while the server wakes up, instead of a blank page", async () => {
+    let wake: (v: unknown) => void = () => {};
+    fetchSession.mockReturnValue(new Promise((res) => (wake = res)));
+    let r: ReactTestRenderer;
+    await act(async () => {
+      r = create(<App />);
+    });
+    const text = JSON.stringify(r!.toJSON());
+    expect(text).toContain("Opening the manual");
+    expect(text).not.toContain("CHAT");
+    await act(async () => wake({ authenticated: true, required: true }));
+    act(() => r!.unmount());
+  });
 });
