@@ -47,3 +47,4 @@ class ThreadMessage(BaseModel):
     role: str
     body: str
     citations: list[Citation]
+    created_at: str  # ISO 8601 with offset

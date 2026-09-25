@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { pageImageUrl } from "../api/client";
+import { LOCKED_EVENT, pageImageUrl } from "../api/client";
 import type { Citation } from "../api/types";
 import { displayManualText } from "../lib/manualText";
 
@@ -109,6 +109,10 @@ export function PageDrawer({ citation, onClose }: Props) {
     fetch(pageImageUrl(citation.pdf_page))
       .then(async (res) => {
         if (cancelled) return;
+        if (res.status === 401) {
+          // Session gone (expired, or the passcode changed): back to the lock.
+          window.dispatchEvent(new Event(LOCKED_EVENT));
+        }
         if (res.status === 503) {
           setImage({ status: "unavailable" });
           return;

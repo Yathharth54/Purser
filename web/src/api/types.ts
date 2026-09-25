@@ -134,4 +134,5 @@ export interface ThreadMessage {
   role: string;
   body: string;
   citations: Citation[];
+  created_at: string; // ISO 8601 with offset
 }

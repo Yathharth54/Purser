@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { fetchSession, LOCKED_EVENT } from "./api/client";
 import { Chat } from "./components/Chat";
+import { PasscodeGate } from "./components/PasscodeGate";
 import { PageDrawer } from "./components/PageDrawer";
 import { TocBrowser } from "./components/TocBrowser";
 import { Wordmark } from "./components/Wordmark";
@@ -36,6 +38,8 @@ export default function App() {
   const [seenManual, setSeenManual] = useState(false);
   const [citation, setCitation] = useState<Citation | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme);
+  // "checking" until the server says whether this device holds a session.
+  const [access, setAccess] = useState<"checking" | "locked" | "open">("checking");
   const chatTabRef = useRef<HTMLButtonElement>(null);
   const manualTabRef = useRef<HTMLButtonElement>(null);
 
@@ -65,6 +69,17 @@ export default function App() {
   }
 
   useEffect(() => {
+    void fetchSession()
+      .then((s) => setAccess(s.authenticated ? "open" : "locked"))
+      // Can't reach the server: show the app and let its own requests report
+      // the problem, rather than a passcode screen that could never succeed.
+      .catch(() => setAccess("open"));
+    const lock = () => setAccess("locked");
+    window.addEventListener(LOCKED_EVENT, lock);
+    return () => window.removeEventListener(LOCKED_EVENT, lock);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try {
       window.localStorage.setItem("purser-theme", theme);
@@ -90,70 +105,82 @@ export default function App() {
             </span>
           </button>
         </div>
-        <div
-          className={tab === "manual" ? "seg seg-manual" : "seg"}
-          role="tablist"
-          aria-label="Sections"
-        >
-          <button
-            type="button"
-            role="tab"
-            id="tab-chat"
-            ref={chatTabRef}
-            tabIndex={tab === "chat" ? 0 : -1}
-            aria-selected={tab === "chat"}
-            aria-controls="panel-chat"
-            className={tab === "chat" ? "on" : undefined}
-            onClick={() => selectTab("chat")}
-            onKeyDown={handleSegKeyDown}
+        {access === "open" && (
+          <div
+            className={tab === "manual" ? "seg seg-manual" : "seg"}
+            role="tablist"
+            aria-label="Sections"
           >
-            Ask
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="tab-manual"
-            ref={manualTabRef}
-            tabIndex={tab === "manual" ? 0 : -1}
-            aria-selected={tab === "manual"}
-            aria-controls="panel-manual"
-            className={tab === "manual" ? "on" : undefined}
-            onClick={() => selectTab("manual")}
-            onKeyDown={handleSegKeyDown}
-          >
-            Manual
-          </button>
-        </div>
+            <button
+              type="button"
+              role="tab"
+              id="tab-chat"
+              ref={chatTabRef}
+              tabIndex={tab === "chat" ? 0 : -1}
+              aria-selected={tab === "chat"}
+              aria-controls="panel-chat"
+              className={tab === "chat" ? "on" : undefined}
+              onClick={() => selectTab("chat")}
+              onKeyDown={handleSegKeyDown}
+            >
+              Ask
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-manual"
+              ref={manualTabRef}
+              tabIndex={tab === "manual" ? 0 : -1}
+              aria-selected={tab === "manual"}
+              aria-controls="panel-manual"
+              className={tab === "manual" ? "on" : undefined}
+              onClick={() => selectTab("manual")}
+              onKeyDown={handleSegKeyDown}
+            >
+              Manual
+            </button>
+          </div>
+        )}
       </header>
 
-      {/* Both panes stay mounted and are hidden with CSS rather than swapped.
-          Chat owns the transcript and the thread id in local state, so
-          unmounting it threw away her whole conversation the moment she
-          tapped Manual to check something -- which is exactly what she does
-          mid-procedure. Keeping it mounted also preserves scroll position.
-          The manual pane is mounted lazily on first use, then kept. */}
-      <main>
-        <div
-          className="pane"
-          id="panel-chat"
-          role="tabpanel"
-          aria-labelledby="tab-chat"
-          style={{ display: tab === "chat" ? "flex" : "none" }}
-        >
-          <Chat onOpenCitation={setCitation} />
-        </div>
-        <div
-          className="pane"
-          id="panel-manual"
-          role="tabpanel"
-          aria-labelledby="tab-manual"
-          style={{ display: tab === "manual" ? "flex" : "none" }}
-        >
-          {seenManual && <TocBrowser />}
-        </div>
-      </main>
+      {access === "locked" && (
+        <main>
+          <PasscodeGate onUnlock={() => setAccess("open")} />
+        </main>
+      )}
 
-      <PageDrawer citation={citation} onClose={() => setCitation(null)} />
+      {access === "open" && (
+        <>
+          {/* Both panes stay mounted and are hidden with CSS rather than swapped.
+              Chat owns the transcript and the thread id in local state, so
+              unmounting it threw away her whole conversation the moment she
+              tapped Manual to check something -- which is exactly what she does
+              mid-procedure. Keeping it mounted also preserves scroll position.
+              The manual pane is mounted lazily on first use, then kept. */}
+          <main>
+            <div
+              className="pane"
+              id="panel-chat"
+              role="tabpanel"
+              aria-labelledby="tab-chat"
+              style={{ display: tab === "chat" ? "flex" : "none" }}
+            >
+              <Chat onOpenCitation={setCitation} />
+            </div>
+            <div
+              className="pane"
+              id="panel-manual"
+              role="tabpanel"
+              aria-labelledby="tab-manual"
+              style={{ display: tab === "manual" ? "flex" : "none" }}
+            >
+              {seenManual && <TocBrowser />}
+            </div>
+          </main>
+
+          <PageDrawer citation={citation} onClose={() => setCitation(null)} />
+        </>
+      )}
     </div>
   );
 }

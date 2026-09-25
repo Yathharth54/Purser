@@ -12,10 +12,9 @@ RUN npm run build
 FROM python:3.12-slim
 WORKDIR /app
 
-# poppler-utils gives us pdftotext (ingest) and pdftoppm (page images).
-# pdftoppm runs on demand at request time (GET /api/page/{n}/image) -- the
-# 1,226 pages are never pre-rendered -- so this must be in the runtime
-# image, not just a build stage.
+# poppler-utils gives us pdftotext, used by ingest (`purser ingest`). Page
+# images no longer need it -- they render in-process with pypdfium2 -- but it
+# stays so the index can be rebuilt from inside this image.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends poppler-utils \
  && rm -rf /var/lib/apt/lists/*

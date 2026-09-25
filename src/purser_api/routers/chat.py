@@ -9,7 +9,7 @@ from sqlmodel import select
 from sse_starlette.sse import EventSourceResponse
 
 from purser_api.citations import resolve_all
-from purser_api.db import Message, Thread, session
+from purser_api.db import Message, Thread, max_threads, prune_threads, session
 from purser_api.deps import get_agent, get_deps, get_tools
 from purser_api.schemas import ChatRequest, ThreadMessage, ThreadSummary
 
@@ -35,7 +35,12 @@ def get_thread(thread_id: str) -> list[ThreadMessage]:
             select(Message).where(Message.thread_id == thread_id).order_by(Message.created_at)
         ).all()
         return [
-            ThreadMessage(role=m.role, body=m.body, citations=json.loads(m.citations_json))
+            ThreadMessage(
+                role=m.role,
+                body=m.body,
+                citations=m.citations_json,
+                created_at=m.created_at.isoformat(),
+            )
             for m in rows
         ]
 
@@ -71,6 +76,9 @@ async def chat(req: ChatRequest) -> EventSourceResponse:
             thread = Thread(title=req.message[:60])
             s.add(thread)
             s.commit()
+            s.refresh(thread)
+            # A new chat is the only thing that grows the history; trim it here.
+            prune_threads(s, keep=max_threads())
             s.refresh(thread)
         thread_id = thread.id
 
@@ -146,7 +154,7 @@ async def chat(req: ChatRequest) -> EventSourceResponse:
                         thread_id=thread_id,
                         role="assistant",
                         body=output.body,
-                        citations_json=json.dumps(payload),
+                        citations_json=payload,
                     )
                 )
                 s.commit()

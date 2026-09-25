@@ -522,3 +522,54 @@ def test_chat_works_against_a_real_pydantic_ai_agent(client, monkeypatch):
     citations = json.loads(next(e for e in events if e["event"] == "citations")["data"])
     assert len(citations) == 1
     assert citations[0]["pdf_page"] == 600
+
+
+def test_starting_a_new_chat_keeps_only_the_most_recent_chats(client, monkeypatch):
+    """The history is capped (PURSER_MAX_THREADS, 100 by default): the least
+    recently used chat goes when a new one would exceed it."""
+    import purser_api.routers.chat as chat_mod
+    from purser_agent.schemas import Answer
+
+    monkeypatch.setenv("PURSER_MAX_THREADS", "2")
+    answer = Answer(body="", refs=[], not_in_manual=True)
+    monkeypatch.setattr(chat_mod, "get_agent", lambda: _FakeAgent(answer))
+    monkeypatch.setattr(chat_mod, "get_deps", lambda: object())
+    for q in ("first", "second", "third"):
+        client.post("/api/chat", json={"message": q})
+    titles = [t["title"] for t in client.get("/api/threads").json()]
+    assert titles == ["third", "second"]
+
+
+def test_a_reopened_chat_carries_when_each_message_was_sent(client, monkeypatch):
+    import purser_api.routers.chat as chat_mod
+    from purser_agent.schemas import Answer
+
+    answer = Answer(body="", refs=[], not_in_manual=True)
+    monkeypatch.setattr(chat_mod, "get_agent", lambda: _FakeAgent(answer))
+    monkeypatch.setattr(chat_mod, "get_deps", lambda: object())
+    client.post("/api/chat", json={"message": "brace position"})
+    [thread] = client.get("/api/threads").json()
+    messages = client.get(f"/api/threads/{thread['id']}").json()
+    assert [m["role"] for m in messages] == ["user", "assistant"]
+    # ISO 8601 with an offset, so the phone can show it in local time
+    assert all(m["created_at"].endswith("+00:00") for m in messages)
+
+
+def test_page_images_are_cached_only_by_her_own_browser(client):
+    """Images sit behind the passcode, so no shared (CDN) cache may keep them --
+    a cached copy would be served without checking the cookie."""
+    r = client.get("/api/page/600/image")
+    assert r.status_code == 200
+    cc = r.headers.get("cache-control", "")
+    assert "private" in cc and "max-age=" in cc
+
+
+def test_a_renderer_error_is_503_not_500(client, monkeypatch):
+    """pypdfium2 raises PdfiumError (a RuntimeError) on a bad PDF or page."""
+    import purser_api.routers.manual as manual_mod
+
+    def _raise(*a, **k):
+        raise RuntimeError("Failed to load page.")
+
+    monkeypatch.setattr(manual_mod, "render_page", _raise)
+    assert client.get("/api/page/600/image").status_code == 503

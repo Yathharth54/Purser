@@ -112,6 +112,7 @@ export async function streamChat(
     return;
   }
 
+  if (res.status === 401) announceLocked();
   if (!res.ok || !res.body) {
     let detail = `Request failed (${res.status})`;
     try {
@@ -205,8 +206,37 @@ export async function streamChat(
   }
 }
 
+/**
+ * Fired on `window` whenever the server answers 401: the passcode cookie is
+ * missing, expired, or was invalidated by a passcode change. App listens and
+ * shows the passcode screen again, from wherever she was.
+ */
+export const LOCKED_EVENT = "purser:locked";
+
+function announceLocked(): void {
+  window.dispatchEvent(new Event(LOCKED_EVENT));
+}
+
+export interface SessionState {
+  authenticated: boolean;
+  required: boolean;
+}
+
+export const fetchSession = (): Promise<SessionState> => getJSON<SessionState>("/api/session");
+
+/** True if the passcode was accepted; the server then sets the session cookie. */
+export async function login(passcode: string): Promise<boolean> {
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passcode }),
+  });
+  return res.ok;
+}
+
 async function getJSON<T>(path: string): Promise<T> {
   const res = await fetch(path);
+  if (res.status === 401) announceLocked();
   if (!res.ok) {
     let detail = `${path} failed (${res.status})`;
     try {

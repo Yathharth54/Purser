@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import subprocess
-
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
@@ -56,11 +54,15 @@ def page_image(pdf_page: int) -> FileResponse:
 
     try:
         path = render_page(pdf_path, pdf_page)
-    except (OSError, subprocess.CalledProcessError) as exc:
-        # A missing pdftoppm binary (OSError/FileNotFoundError) or a missing/bad
-        # PDF at PURSER_PDF_PATH (pdftoppm exits nonzero -> CalledProcessError)
-        # are both misconfiguration of the running container, not a client
-        # error and not a server bug -- 503, not an unhandled 500 traceback.
+    except (OSError, RuntimeError, IndexError, ValueError) as exc:
+        # A missing or unreadable PDF at PURSER_PDF_PATH (OSError), a page
+        # pypdfium2 can't load (PdfiumError is a RuntimeError), or a page the
+        # PDF doesn't have: the running deployment's problem, not the client's
+        # -- 503, not an unhandled 500 traceback.
         raise HTTPException(status_code=503, detail=f"page rendering unavailable: {exc}") from exc
 
-    return FileResponse(path, media_type="image/webp")
+    # Behind the passcode: only her own browser may cache it (a week), never a
+    # shared CDN, which would hand the image out without checking the cookie.
+    return FileResponse(
+        path, media_type="image/webp", headers={"Cache-Control": "private, max-age=604800"}
+    )
