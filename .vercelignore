@@ -1,0 +1,17 @@
+# Never upload: local environments, runtime state, secrets, the controlled PDF.
+.venv/
+node_modules/
+web/node_modules/
+web/dist/
+var/
+.fastembed/
+.superpowers/
+.env
+.env.*
+docs/*.pdf
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+.models/
