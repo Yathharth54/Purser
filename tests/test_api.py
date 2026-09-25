@@ -522,3 +522,19 @@ def test_chat_works_against_a_real_pydantic_ai_agent(client, monkeypatch):
     citations = json.loads(next(e for e in events if e["event"] == "citations")["data"])
     assert len(citations) == 1
     assert citations[0]["pdf_page"] == 600
+
+
+def test_starting_a_new_chat_keeps_only_the_most_recent_chats(client, monkeypatch):
+    """The history is capped (PURSER_MAX_THREADS, 100 by default): the least
+    recently used chat goes when a new one would exceed it."""
+    import purser_api.routers.chat as chat_mod
+    from purser_agent.schemas import Answer
+
+    monkeypatch.setenv("PURSER_MAX_THREADS", "2")
+    answer = Answer(body="", refs=[], not_in_manual=True)
+    monkeypatch.setattr(chat_mod, "get_agent", lambda: _FakeAgent(answer))
+    monkeypatch.setattr(chat_mod, "get_deps", lambda: object())
+    for q in ("first", "second", "third"):
+        client.post("/api/chat", json={"message": q})
+    titles = [t["title"] for t in client.get("/api/threads").json()]
+    assert titles == ["third", "second"]
