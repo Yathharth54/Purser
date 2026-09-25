@@ -514,6 +514,71 @@ main {
   color: var(--dim);
 }
 
+/* ---------- Passcode screen ----------
+   The only thing shown before the passcode is accepted (see PasscodeGate).
+   Centred in the thumb-reachable middle of a phone, on the app's own paper. */
+
+.gate {
+  width: min(100% - 32px, 360px);
+  margin: 12vh auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gate-title {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.gate-note {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.gate-input {
+  font: inherit;
+  font-size: 16px; /* >= 16px stops iOS Safari zooming into the field */
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--rule);
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: var(--inset);
+}
+
+.gate-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.gate-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--warning);
+}
+
+.gate-go {
+  font: inherit;
+  font-weight: 700;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--gold);
+  color: #1b1405;
+  cursor: pointer;
+}
+
+.gate-go:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 /* ---------- Manual blocks: the formatted manual document ----------
    Rendered by ManualBlocks.tsx from typed `Block`s (Task 6/7's parser),
    used identically inside the citation "paper" card (Task 11) and the
