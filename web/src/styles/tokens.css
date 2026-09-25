@@ -44,6 +44,10 @@ html, body {
   /* Manual note severity. Both clear 4.5:1 on --sunken and --paper
      (caution 5.15 / 6.35, warning 5.81 / 7.16). */
   --caution: #8a5100; --warning: #a8201a;
+  /* Chats panel: the dimmed chat behind it, its tool buttons, the open
+     chat's tint and a search hit. --pick is --gold-ink at 9%. */
+  --scrim: rgba(16,24,40,.34); --tool: #f4efe6; --pick: rgba(122,95,33,.09);
+  --hl: rgba(220,192,140,.5);
   --s1: 0 1px 2px rgba(60,48,26,.13), 0 2px 5px -1px rgba(60,48,26,.09);
   --s2: 0 1px 2px rgba(60,48,26,.16), 0 5px 12px -3px rgba(60,48,26,.16),
         0 14px 28px -10px rgba(60,48,26,.14);
@@ -65,6 +69,8 @@ html, body {
   --paper: #131d38; --paper-ink: var(--ivory); --accent: var(--gold);
   /* On --sunken / --paper: caution 10.1 / 9.17, warning 8.3 / 7.53. */
   --caution: #f2b560; --warning: #ff8f80;
+  --scrim: rgba(3,6,15,.62); --tool: #1a2547; --pick: rgba(220,192,140,.11);
+  --hl: rgba(220,192,140,.3);
   --s1: 0 1px 2px rgba(0,0,0,.4), 0 2px 6px -1px rgba(0,0,0,.35);
   --s2: 0 1px 3px rgba(0,0,0,.45), 0 6px 14px -3px rgba(0,0,0,.45),
         0 16px 32px -12px rgba(0,0,0,.5);

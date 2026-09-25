@@ -16,8 +16,9 @@
  *    ([data-theme="cabin"]) is the dim-light reading mode against a navy
  *    ground, not a generic dark theme.
  *  - Orchestrated motion is deliberately rare: the page drawer sliding up,
- *    and the segmented control's thumb sliding between Ask and Manual.
- *    Both respect prefers-reduced-motion via the global rule below.
+ *    the chats panel sliding in, and the segmented control's thumb sliding
+ *    between Ask and Manual. All respect prefers-reduced-motion via the
+ *    global rule below.
  */
 
 * {
@@ -86,20 +87,20 @@ button {
   padding: calc(env(safe-area-inset-top, 0px) + 13px) 16px 12px;
 }
 
+/* Chats button, wordmark, theme button: the wordmark sits in the true
+   centre because both side slots are the same 44px. */
 .head-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   gap: 10px;
-}
-
-.head-spacer {
-  flex: 1;
 }
 
 /* Wordmark.tsx deliberately carries no layout -- this is that layout. */
 .wordmark {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex: none;
   min-width: 0;
@@ -125,27 +126,32 @@ button {
   white-space: nowrap;
 }
 
-/* A 44px hit target wrapping the 32px chip the mockup actually shows. */
-.theme-toggle {
+/* A 44px hit target wrapping the 40px rounded-square chip the mockup shows. */
+.head-btn {
   flex: none;
   width: 44px;
   height: 44px;
   display: grid;
   place-items: center;
+  padding: 0;
   background: none;
 }
 
-.theme-toggle-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+.head-btn-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
   display: grid;
   place-items: center;
-  font-size: 14px;
-  line-height: 1;
   color: var(--dim);
   background: var(--raised);
   box-shadow: var(--s1), var(--hi);
+}
+
+.head-btn[aria-expanded="true"] .head-btn-chip {
+  color: var(--accent);
+  background: var(--sunken);
+  box-shadow: var(--inset);
 }
 
 /* ---------- Segmented control: a real tablist, not a link menu ---------- */
@@ -221,117 +227,271 @@ main {
   flex-direction: column;
 }
 
-/* Chats / New: a slim bar above the conversation. */
-.chat-bar {
+/* Her past chats (ChatHistory): a panel that slides in from the left over
+   the dimmed chat. The third orchestrated motion, and like the other two it
+   respects prefers-reduced-motion through the global rule above. */
+.chats-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--scrim);
+}
+
+.chats {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 31;
+  width: min(322px, 86vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--raised);
+  border-radius: 0 24px 24px 0;
+  box-shadow: 1px 0 0 var(--hair), 18px 0 50px -10px rgba(0, 0, 0, 0.45);
+  padding-top: env(safe-area-inset-top, 0px);
+  transform: translateX(-105%);
+  transition: transform 0.24s ease;
+  visibility: hidden;
+}
+
+.chats--open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+/* Hidden only once the slide out has finished, so it animates both ways. */
+.chats:not(.chats--open) {
+  pointer-events: none;
+  transition: transform 0.24s ease, visibility 0s linear 0.24s;
+}
+
+.chats-head {
   flex: none;
   display: flex;
   align-items: center;
-  padding: 8px 16px 0;
+  gap: 8px;
+  padding: 18px 10px 6px 22px;
 }
 
-.bar-btn {
-  font: inherit;
-  font-size: 12.5px;
+.chats-title {
+  flex: 1;
+  margin: 0;
+  font-family: var(--ff-display);
+  font-size: 30px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--rule);
-  background: var(--raised);
-  color: var(--text);
-  cursor: pointer;
+  line-height: 1;
 }
 
-.bar-btn:disabled {
+.chats-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--dim);
+}
+
+.chats-tools {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 16px 16px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.chats-new {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 13px;
+  border: 1px solid var(--rule);
+  background: var(--tool);
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 700;
+  box-shadow: var(--s1), var(--hi);
+}
+
+.chats-new svg {
+  color: var(--accent);
+}
+
+.chats-new:disabled,
+.chats-row:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.bar-btn:focus-visible {
+.chats-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 6px 0 14px;
+  border-radius: 12px;
+  background: var(--sunken);
+  box-shadow: var(--inset);
+  color: var(--dim);
+}
+
+.chats-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  font-size: 16px; /* >=16px avoids iOS Safari zoom-on-focus */
+  color: var(--text);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.chats-search input::placeholder {
+  color: var(--dim);
+}
+
+/* Our own clear button replaces the browser's. */
+.chats-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.chats-search:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* `.turns` sets display, which would otherwise override the hidden attribute
-   and leave the conversation showing under the chat list. */
-.turns[hidden] {
-  display: none;
+.chats-clear {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--dim);
 }
 
-/* Her past chats (ChatHistory). */
-.hist {
+.chats-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 16px 16px;
-}
-
-.hist-head {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 16px 10px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.hist-title {
+.chats-note {
   margin: 0;
-  font-family: var(--ff-display);
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.hist-note {
-  margin: 8px 0;
+  padding: 0 12px;
   font-size: 13.5px;
   color: var(--dim);
 }
 
-.hist-list {
+.chats-body .turn-error {
+  margin: 0 12px;
+}
+
+.chats-group-label {
+  margin: 0;
+  padding: 0 12px 6px;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.chats-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
-.hist-row {
-  font: inherit;
+.chats-row {
   width: 100%;
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 11px 13px;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 12px;
+  min-height: 44px;
   border-radius: 12px;
-  border: 1px solid var(--rule);
-  background: var(--raised);
-  color: var(--text);
   text-align: left;
-  cursor: pointer;
+  color: var(--text);
 }
 
-.hist-row.on {
-  border-color: var(--accent);
-}
-
-.hist-row:focus-visible {
+.chats-row:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 0;
 }
 
-.hist-row-title {
+.chats-row-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 50%;
+}
+
+.chats-row-text {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.hist-row-when {
-  flex: none;
+.chats-row-title {
+  font-size: 15px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.chats-row-title mark {
+  background: var(--hl);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.chats-row-when {
   font-family: var(--ff-mono);
   font-size: 11px;
+  color: var(--dim);
+}
+
+.chats-row.on {
+  background: var(--pick);
+}
+
+.chats-row.on .chats-row-dot {
+  background: var(--accent);
+}
+
+.chats-row.on .chats-row-title {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.chats-foot {
+  flex: none;
+  margin: 0;
+  padding: 12px 22px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  border-top: 1px solid var(--hair);
+  font-size: 12px;
   color: var(--dim);
 }
 

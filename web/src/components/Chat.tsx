@@ -23,6 +23,10 @@ interface Turn {
 
 interface Props {
   onOpenCitation: (c: Citation) => void;
+  /** The chats panel is opened from the app header, which has no view of
+   *  the thread -- Chat owns what switching or starting a chat means. */
+  chatsOpen: boolean;
+  onCloseChats: () => void;
 }
 
 // Per the approved mockup's empty state (four chips, this exact wording and
@@ -116,11 +120,10 @@ function friendlyError(detail: string): string {
   return `Couldn't answer: ${detail}`;
 }
 
-export function Chat({ onOpenCitation }: Props) {
+export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   // True while the chat she was in before a refresh is being reopened: asking
   // now would start a new chat that the reopened one then replaces on screen.
   const [restoring, setRestoring] = useState(() => storedThread() !== null);
@@ -150,7 +153,7 @@ export function Chat({ onOpenCitation }: Props) {
         storeThread(null);
       }
     }
-    setShowHistory(false);
+    onCloseChats();
   }
 
   function newChat() {
@@ -158,7 +161,7 @@ export function Chat({ onOpenCitation }: Props) {
     threadId.current = null;
     storeThread(null);
     setTurns([]);
-    setShowHistory(false);
+    onCloseChats();
   }
 
   useEffect(() => {
@@ -223,30 +226,16 @@ export function Chat({ onOpenCitation }: Props) {
 
   return (
     <div className="chat">
-      <div className="chat-bar">
-        <button
-          type="button"
-          className="bar-btn"
-          onClick={() => setShowHistory((v) => !v)}
-          disabled={busy}
-        >
-          Chats
-        </button>
-        <span className="head-spacer" aria-hidden="true" />
-        <button type="button" className="bar-btn new" onClick={newChat} disabled={busy}>
-          New
-        </button>
-      </div>
+      <ChatHistory
+        open={chatsOpen}
+        currentId={threadId.current}
+        busy={busy}
+        onSelect={(id) => void openThread(id)}
+        onNew={newChat}
+        onClose={onCloseChats}
+      />
 
-      {showHistory && (
-        <ChatHistory
-          currentId={threadId.current}
-          onSelect={(id) => void openThread(id)}
-          onClose={() => setShowHistory(false)}
-        />
-      )}
-
-      <div className="turns" ref={scrollRef} hidden={showHistory}>
+      <div className="turns" ref={scrollRef}>
         {turns.length === 0 && (
           <div className="empty">
             <h2 className="empty-head">Ask about a procedure</h2>
