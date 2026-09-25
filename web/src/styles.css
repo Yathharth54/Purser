@@ -331,13 +331,55 @@ main {
   border-radius: 6px 20px 20px 20px;
   font-size: 14.5px;
   line-height: 1.62;
-  white-space: pre-wrap;
+  /* Rendered from the model's Markdown (lib/answerMarkdown): paragraphs and
+     <br>s carry the line structure, so no pre-wrap -- it would double it. */
+  white-space: normal;
   box-shadow: var(--s2), var(--hi);
   /* A readable measure for the assistant's own prose -- unconstrained, a
      laptop-width answer runs the full viewport, which is what
      recurrent-training reading on a laptop actually hits. */
   max-width: 70ch;
   overflow-wrap: anywhere;
+}
+
+.bot p {
+  margin: 0 0 10px;
+}
+
+.bot ul,
+.bot ol {
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+
+.bot li {
+  margin: 0 0 4px;
+}
+
+.bot > :last-child {
+  margin-bottom: 0;
+}
+
+.bot strong {
+  font-weight: 700;
+}
+
+.bot code {
+  font-family: var(--ff-mono);
+  font-size: 0.88em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sunken);
+}
+
+.ans-h {
+  margin: 12px 0 6px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.bot > .ans-h:first-child {
+  margin-top: 0;
 }
 
 .stamp {

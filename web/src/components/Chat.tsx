@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { streamChat } from "../api/client";
 import type { Citation, ToolEvent } from "../api/types";
 import { CitationChip } from "./CitationChip";
+import { AnswerMarkdown } from "../lib/answerMarkdown";
 
 interface Turn {
   role: "user" | "assistant";
@@ -194,7 +195,11 @@ export function Chat({ onOpenCitation }: Props) {
                   </div>
                 )}
 
-                {turn.body && <div className="bot">{turn.body}</div>}
+                {turn.body && (
+                  <div className="bot">
+                    <AnswerMarkdown text={turn.body} />
+                  </div>
+                )}
 
                 {turn.citations.length > 0 && (
                   <div className="citations">
