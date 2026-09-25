@@ -165,6 +165,58 @@ def test_page_image_out_of_range_404s(client):
     assert client.get("/api/page/99999/image").status_code == 404
 
 
+def _no_pdf(monkeypatch):
+    import purser_api.routers.manual as manual_mod
+
+    monkeypatch.setattr(manual_mod, "get_pdf_path", lambda: Path("/nowhere/manual.pdf"))
+
+
+def test_page_image_comes_from_the_page_store_when_there_is_no_pdf(client, monkeypatch):
+    """On Vercel the PDF is never deployed: pages come pre-rendered from the
+    private Blob store, fetched once per instance and then served from disk."""
+    import vercel.blob
+
+    _no_pdf(monkeypatch)
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "test-token")
+    calls = []
+
+    class _Result:
+        content = b"RIFF0000WEBPVP8 " + b"x" * 2000
+
+    def _get(path, *, access):
+        calls.append((path, access))
+        return _Result()
+
+    monkeypatch.setattr(vercel.blob, "get", _get)
+    for _ in range(2):
+        r = client.get("/api/page/600/image")
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "image/webp"
+        assert r.headers["cache-control"] == "private, max-age=604800"
+    assert calls == [("pages/p0600.webp", "private")]  # the second came from the cache
+
+
+def test_a_page_missing_from_the_store_is_503(client, monkeypatch):
+    import vercel.blob
+
+    _no_pdf(monkeypatch)
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "test-token")
+
+    def _get(path, *, access):
+        raise vercel.blob.BlobNotFoundError()
+
+    monkeypatch.setattr(vercel.blob, "get", _get)
+    r = client.get("/api/page/600/image")
+    assert r.status_code == 503
+    assert "not uploaded" in r.json()["detail"]
+
+
+def test_no_pdf_and_no_page_store_is_503(client, monkeypatch):
+    _no_pdf(monkeypatch)
+    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
+    assert client.get("/api/page/600/image").status_code == 503
+
+
 def test_page_image_missing_pdf_path_returns_503(client, monkeypatch):
     """A missing/misconfigured PURSER_PDF_PATH is a container config error,
     not a client error and not a server bug -- 503, not an unhandled 500."""
@@ -174,6 +226,7 @@ def test_page_image_missing_pdf_path_returns_503(client, monkeypatch):
         raise KeyError("PURSER_PDF_PATH")
 
     monkeypatch.setattr(manual_mod, "get_pdf_path", _raise)
+    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
     assert client.get("/api/page/600/image").status_code == 503
 
 
