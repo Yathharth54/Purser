@@ -129,10 +129,40 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
   const [restoring, setRestoring] = useState(() => storedThread() !== null);
   const threadId = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const questionRef = useRef<HTMLElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // What the next render should do with the scroll position: "question" puts
+  // the question she just asked at the top and leaves it there while the
+  // answer streams in below; "end" shows the end of a chat she reopened.
+  // Anything else -- every streamed word -- leaves her scroll where it is.
+  const scrollIntent = useRef<"question" | "end" | null>(null);
+  const pinned = useRef(false);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    const box = scrollRef.current;
+    const spacer = spacerRef.current;
+    if (!box || !spacer) return;
+    const intent = scrollIntent.current;
+    scrollIntent.current = null;
+    if (intent === "end") {
+      pinned.current = false;
+      spacer.style.height = "0px";
+      box.scrollTo({ top: box.scrollHeight });
+      return;
+    }
+    const q = questionRef.current;
+    if (!pinned.current || !q) return;
+    // Room below the question for it to reach the top even while the answer
+    // is still short; it shrinks to nothing as the answer grows.
+    const boxTop = box.getBoundingClientRect().top;
+    const qTop = q.getBoundingClientRect().top - boxTop + box.scrollTop;
+    const below = box.scrollHeight - spacer.offsetHeight - qTop;
+    spacer.style.height = `${Math.max(0, box.clientHeight - below)}px`;
+    if (intent === "question") {
+      const reduce = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      box.scrollTo({ top: Math.max(0, qTop - 12), behavior: reduce ? "auto" : "smooth" });
+    }
   }, [turns]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -144,6 +174,7 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
       const messages = await fetchThread(id);
       threadId.current = id;
       storeThread(id);
+      scrollIntent.current = "end";
       setTurns(messages.map(toTurn));
     } catch (err) {
       // Forget it only if the server says it's gone (pruned: the last 100 are
@@ -160,8 +191,19 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
     if (busy) return;
     threadId.current = null;
     storeThread(null);
+    scrollIntent.current = "end";
     setTurns([]);
     onCloseChats();
+  }
+
+  // A chat deleted from the panel: if it is the one on screen, clear it
+  // without closing the panel she is still working in.
+  function chatDeleted(id: string) {
+    if (threadId.current !== id) return;
+    threadId.current = null;
+    storeThread(null);
+    scrollIntent.current = "end";
+    setTurns([]);
   }
 
   useEffect(() => {
@@ -176,6 +218,8 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
 
     setInput("");
     setBusy(true);
+    scrollIntent.current = "question";
+    pinned.current = true;
     setTurns((t) => [
       ...t,
       {
@@ -224,6 +268,8 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
     setBusy(false);
   }
 
+  const lastQuestion = turns.map((t) => t.role).lastIndexOf("user");
+
   return (
     <div className="chat">
       <ChatHistory
@@ -232,6 +278,7 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
         busy={busy}
         onSelect={(id) => void openThread(id)}
         onNew={newChat}
+        onDeleted={chatDeleted}
         onClose={onCloseChats}
       />
 
@@ -261,7 +308,7 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
         {turns.map((turn, i) => {
           if (turn.role === "user") {
             return (
-              <article key={i} className="me">
+              <article key={i} className="me" ref={i === lastQuestion ? questionRef : undefined}>
                 {turn.body}
               </article>
             );
@@ -311,6 +358,7 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
             </article>
           );
         })}
+        <div ref={spacerRef} className="turns-spacer" aria-hidden="true" />
       </div>
 
       <form

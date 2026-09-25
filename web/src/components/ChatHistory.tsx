@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchThreads } from "../api/client";
+import { deleteThread, fetchThreads } from "../api/client";
 import type { ThreadSummary } from "../api/types";
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   busy: boolean;
   onSelect: (id: string) => void;
   onNew: () => void;
+  /** After a chat is deleted -- Chat clears the screen if it was the open one. */
+  onDeleted: (id: string) => void;
   onClose: () => void;
 }
 
@@ -69,10 +71,13 @@ function highlight(title: string, query: string): React.ReactNode {
  * Escape or a tap on the dimmed chat behind it. The list is fetched afresh
  * each time it opens, so a chat she just asked in is already at the top.
  */
-export function ChatHistory({ open, currentId, busy, onSelect, onNew, onClose }: Props) {
+export function ChatHistory({ open, currentId, busy, onSelect, onNew, onDeleted, onClose }: Props) {
   const [threads, setThreads] = useState<ThreadSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // The chat whose delete is waiting for her to confirm, and any failure.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -82,6 +87,8 @@ export function ChatHistory({ open, currentId, busy, onSelect, onNew, onClose }:
     let cancelled = false;
     setError(null);
     setQuery("");
+    setConfirming(null);
+    setDeleteError(null);
     void fetchThreads()
       .then((t) => !cancelled && setThreads(t))
       .catch((err: unknown) => !cancelled && setError(err instanceof Error ? err.message : String(err)));
@@ -123,6 +130,21 @@ export function ChatHistory({ open, currentId, busy, onSelect, onNew, onClose }:
     } else if (!e.shiftKey && document.activeElement === last) {
       e.preventDefault();
       first.focus();
+    }
+  }
+
+  async function remove(id: string) {
+    setConfirming(null);
+    setDeleteError(null);
+    const before = threads;
+    // Gone from the list at once; put back if the server refuses.
+    setThreads((t) => t?.filter((x) => x.id !== id) ?? t);
+    try {
+      await deleteThread(id);
+      onDeleted(id);
+    } catch (err) {
+      setThreads(before);
+      setDeleteError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -207,6 +229,7 @@ export function ChatHistory({ open, currentId, busy, onSelect, onNew, onClose }:
 
         <div className="chats-body">
           {error && <p className="turn-error">Couldn't load your chats: {error}</p>}
+          {deleteError && <p className="turn-error">{deleteError}</p>}
           {!error && threads === null && <p className="chats-note">Loading…</p>}
           {!error && threads?.length === 0 && <p className="chats-note">No chats yet. Ask something to start one.</p>}
           {!error && q && threads && threads.length > 0 && shown.length === 0 && (
@@ -218,8 +241,21 @@ export function ChatHistory({ open, currentId, busy, onSelect, onNew, onClose }:
               <ul className="chats-list">
                 {g.items.map((t) => {
                   const current = t.id === currentId;
+                  if (confirming === t.id) {
+                    return (
+                      <li key={t.id} className="chats-confirm" role="group" aria-label="Delete this chat?">
+                        <span className="chats-confirm-text">Delete this chat?</span>
+                        <button type="button" className="chats-confirm-no" onClick={() => setConfirming(null)}>
+                          Cancel
+                        </button>
+                        <button type="button" className="chats-confirm-yes" onClick={() => void remove(t.id)}>
+                          Delete
+                        </button>
+                      </li>
+                    );
+                  }
                   return (
-                    <li key={t.id}>
+                    <li key={t.id} className="chats-item">
                       <button
                         type="button"
                         className={current ? "chats-row on" : "chats-row"}
@@ -238,6 +274,21 @@ export function ChatHistory({ open, currentId, busy, onSelect, onNew, onClose }:
                             {current && " · open now"}
                           </span>
                         </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="chats-del"
+                        onClick={() => setConfirming(t.id)}
+                        disabled={busy}
+                        tabIndex={open ? 0 : -1}
+                        aria-label={`Delete “${t.title || "Untitled chat"}”`}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M4 7h16" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+                          <path d="M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7" />
+                        </svg>
                       </button>
                     </li>
                   );

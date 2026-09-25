@@ -36,6 +36,10 @@ def test_chat_is_closed_without_the_passcode(locked):
     assert locked.post("/api/chat", json={"message": "hi"}).status_code == 401
 
 
+def test_deleting_a_chat_is_closed_without_the_passcode(locked):
+    assert locked.delete("/api/threads/anything").status_code == 401
+
+
 def test_health_and_session_stay_open_and_report_locked(locked):
     assert locked.get("/api/health").status_code == 200
     assert locked.get("/api/session").json() == {"authenticated": False, "required": True}

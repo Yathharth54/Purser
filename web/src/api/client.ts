@@ -273,5 +273,12 @@ export const pageImageUrl = (pdfPage: number): string => `/api/page/${pdfPage}/i
 
 export const fetchThreads = (): Promise<ThreadSummary[]> => getJSON<ThreadSummary[]>("/api/threads");
 
+/** Delete a chat for good. One that is already gone counts as deleted. */
+export async function deleteThread(threadId: string): Promise<void> {
+  const res = await fetch(`/api/threads/${encodeURIComponent(threadId)}`, { method: "DELETE" });
+  if (res.status === 401) announceLocked();
+  if (!res.ok && res.status !== 404) throw new Error(`Couldn't delete this chat (${res.status})`);
+}
+
 export const fetchThread = (threadId: string): Promise<ThreadMessage[]> =>
   getJSON<ThreadMessage[]>(`/api/threads/${encodeURIComponent(threadId)}`);

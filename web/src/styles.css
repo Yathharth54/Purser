@@ -433,6 +433,89 @@ main {
   color: var(--text);
 }
 
+/* A chat and its delete button, side by side. */
+.chats-item {
+  display: flex;
+  align-items: flex-start;
+}
+
+.chats-item .chats-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.chats-del {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--dim);
+  opacity: 0.75;
+}
+
+.chats-del:hover,
+.chats-del:focus-visible {
+  opacity: 1;
+  color: var(--warning);
+}
+
+.chats-del:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chats-del:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+/* The row turned into "Delete this chat?" until she answers. */
+.chats-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 12px;
+  background: var(--sunken);
+  box-shadow: var(--inset);
+}
+
+.chats-confirm-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.chats-confirm-no,
+.chats-confirm-yes {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.chats-confirm-no {
+  color: var(--dim);
+}
+
+.chats-confirm-yes {
+  color: var(--warning);
+  background: var(--raised);
+  box-shadow: var(--s1), var(--hi);
+}
+
+.chats-confirm-no:focus-visible,
+.chats-confirm-yes:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .chats-row:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 0;
@@ -504,6 +587,13 @@ main {
   display: flex;
   flex-direction: column;
   gap: 7px;
+}
+
+/* Room under the newest question so it can sit at the top while its answer
+   is still short (Chat sets the height; it is 0 otherwise). */
+.turns-spacer {
+  flex: none;
+  height: 0;
 }
 
 /* ---------- Empty state ---------- */
