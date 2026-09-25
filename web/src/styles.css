@@ -628,6 +628,14 @@ main {
   color: var(--dim);
 }
 
+/* Shown while the server wakes up, before we know whether she's unlocked. */
+.opening {
+  margin: 14vh auto 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--dim);
+}
+
 /* ---------- Passcode screen ----------
    The only thing shown before the passcode is accepted (see PasscodeGate).
    Centred in the thumb-reachable middle of a phone, on the app's own paper. */

@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from purser_api import auth
-from purser_api.db import engine
 from purser_api.routers import chat, manual
 
 # `src/purser_api/main.py` -> parent (purser_api) -> parent (src) -> parent (repo root).
@@ -22,7 +21,8 @@ _DIST = _REPO_ROOT / "web" / "dist"
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    engine()  # create app.sqlite tables
+    # No database work here: engine() connects (and creates missing tables) on
+    # first use, so a cold start for the passcode check doesn't wait on Neon.
     yield
 
 

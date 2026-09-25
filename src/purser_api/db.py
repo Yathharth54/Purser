@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -147,7 +148,9 @@ def engine() -> Engine:
             # Neon closes idle connections; pre-ping replaces a dead one
             # instead of failing the request that happens to draw it.
             _engine = create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=3)
+        t = time.perf_counter()
         SQLModel.metadata.create_all(_engine)
+        print(f"[startup] database ready in {time.perf_counter() - t:.2f}s", flush=True)
     return _engine
 
 
