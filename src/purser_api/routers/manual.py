@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
+from purser_api import pages
 from purser_api.deps import get_corpus, get_pdf_path, get_tools
 from purser_core.models import ReadingPage, TocNode
 from purser_core.reading import clamp_by_page_in_section, reading_pages
@@ -48,18 +51,32 @@ def page_image(pdf_page: int) -> FileResponse:
         raise HTTPException(status_code=404, detail="page out of range")
 
     try:
-        pdf_path = get_pdf_path()
-    except KeyError as exc:
-        raise HTTPException(status_code=503, detail="PURSER_PDF_PATH is not configured") from exc
+        pdf_path: Path | None = get_pdf_path()
+    except KeyError:
+        pdf_path = None
 
-    try:
-        path = render_page(pdf_path, pdf_page)
-    except (OSError, RuntimeError, IndexError, ValueError) as exc:
-        # A missing or unreadable PDF at PURSER_PDF_PATH (OSError), a page
-        # pypdfium2 can't load (PdfiumError is a RuntimeError), or a page the
-        # PDF doesn't have: the running deployment's problem, not the client's
-        # -- 503, not an unhandled 500 traceback.
-        raise HTTPException(status_code=503, detail=f"page rendering unavailable: {exc}") from exc
+    if pdf_path is not None and pdf_path.is_file():
+        # Locally and in Docker: render from the PDF itself.
+        try:
+            path = render_page(pdf_path, pdf_page)
+        except (OSError, RuntimeError, IndexError, ValueError) as exc:
+            # An unreadable PDF (OSError), a page pypdfium2 can't load
+            # (PdfiumError is a RuntimeError), or a page the PDF doesn't have:
+            # the running deployment's problem, not the client's -- 503, not an
+            # unhandled 500 traceback.
+            detail = f"page rendering unavailable: {exc}"
+            raise HTTPException(status_code=503, detail=detail) from exc
+    elif pages.configured():
+        # On Vercel, where the PDF is never deployed: the pre-rendered page
+        # from the private Blob store (see purser_api.pages).
+        try:
+            path = pages.fetch_page(pdf_page)
+        except pages.PageNotStored as exc:
+            raise HTTPException(status_code=503, detail=f"page image not uploaded: {exc}") from exc
+        except Exception as exc:  # the Blob SDK's errors, network failures
+            raise HTTPException(status_code=503, detail=f"page store unavailable: {exc}") from exc
+    else:
+        raise HTTPException(status_code=503, detail="no manual PDF and no page store configured")
 
     # Behind the passcode: only her own browser may cache it (a week), never a
     # shared CDN, which would hand the image out without checking the cookie.
