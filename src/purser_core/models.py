@@ -70,16 +70,24 @@ class Block(BaseModel):
     """One structural unit of the manual, recovered from the text layer.
 
     `text` is verbatim for every kind EXCEPT `para`, `bullet`, `step` and `note`, where
-    lines the PDF hard-wrapped are rejoined with a single space. That restores
-    the sentence the author wrote; the line break at column 90 was a layout
-    artifact, not meaning. `table` keeps its own newlines and leading spaces,
-    because its columns ARE the information.
+    lines the PDF hard-wrapped are rejoined with a single space (or none, after
+    a line-end hyphen). That restores the sentence the author wrote; the line
+    break at column 90 was a layout artifact, not meaning. `table` keeps its own
+    newlines and leading spaces, because its columns ARE the information.
+
+    `toc` is one row of a section's printed contents page: `text` is the entry's
+    title alone, `number` its numbering ("2.1") and `page` the page in the
+    section it points at. The dot leaders between them were typesetting.
     """
 
-    kind: Literal["heading", "subheading", "para", "bullet", "step", "note", "caption", "table"]
-    level: int = 0  # heading depth, or bullet/step nesting
+    kind: Literal[
+        "heading", "subheading", "para", "bullet", "step", "note", "caption", "table", "toc"
+    ]
+    level: int = 0  # heading depth, bullet/step nesting, or toc entry depth
     text: str
     depth: int = 0  # enclosing headings -- see purser_core.outline.annotate_depth
+    number: str | None = None  # toc only
+    page: int | None = None  # toc only: a page_in_section
 
 
 class PageText(BaseModel):

@@ -2,6 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchSection, fetchToc } from "../api/client";
 import type { ReadingPage, TocNode } from "../api/types";
 import { ManualBlocks } from "./ManualBlocks";
+import { splitHeading } from "../lib/headingCase";
+
+/** The heading a page opens inside, cased like the heading itself. */
+function continuedLabel(heading: string): string {
+  const { number, title } = splitHeading(heading);
+  return number ? `${number} ${title}` : title;
+}
 
 type SectionState =
   | { status: "loading" }
@@ -110,6 +117,8 @@ export function TocBrowser() {
     backRef.current?.focus();
   }, [openNode]);
 
+  const [jumpTo, setJumpTo] = useState<number | null>(null);
+
   const visibility = useMemo(
     () => (section.status === "ready" ? hiddenBlocks(section.pages, collapsed) : null),
     [section, collapsed],
@@ -123,6 +132,28 @@ export function TocBrowser() {
       return next;
     });
   }
+
+  // A contents entry names a page of this section. Scroll to it -- or to the
+  // next page that exists, for an entry pointing at a blank page -- opening
+  // any collapsed heading that hides it first.
+  function jumpToPage(pageInSection: number) {
+    if (section.status !== "ready") return;
+    const target = section.pages.find((p) => p.page_in_section >= pageInSection);
+    if (!target) return;
+    if (visibility?.hiddenPages.has(target.pdf_page)) setCollapsed(new Set());
+    setJumpTo(target.pdf_page);
+  }
+
+  // Scroll once the page is rendered and shown -- after any collapse above
+  // has been undone, which a scroll in the click handler would run ahead of.
+  useEffect(() => {
+    if (jumpTo === null) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    document
+      .getElementById(`manual-page-${jumpTo}`)
+      ?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    setJumpTo(null);
+  }, [jumpTo, visibility]);
 
   function handleScroll() {
     const el = docRef.current;
@@ -186,6 +217,7 @@ export function TocBrowser() {
               return (
                 <section
                   key={page.pdf_page}
+                  id={`manual-page-${page.pdf_page}`}
                   aria-label={`Page ${page.page_in_section} of ${page.section_total}`}
                   hidden={visibility?.hiddenPages.has(page.pdf_page)}
                 >
@@ -196,7 +228,7 @@ export function TocBrowser() {
                     <i aria-hidden="true" />
                   </div>
                   {opensInside ? (
-                    <p className="m-cont">{`${page.continues![page.continues!.length - 1]} · continued`}</p>
+                    <p className="m-cont">{`${continuedLabel(page.continues![page.continues!.length - 1]!)} · continued`}</p>
                   ) : null}
                   {page.empty ? (
                     <p className="reader-blank">No text on this page.</p>
@@ -207,6 +239,7 @@ export function TocBrowser() {
                       collapsed={collapsed}
                       onToggle={toggle}
                       hidden={hidden}
+                      onJumpToPage={jumpToPage}
                     />
                   )}
                 </section>

@@ -34,6 +34,43 @@ _TABLE_CAP = re.compile(r"^Table\s+[\d.]+\s?[A-Z]{0,2}\d?\b.{0,40}$", re.IGNOREC
 # gap and does not open with a bullet glyph -- see the indent-drop comment
 # below for why both halves of that test matter.
 _ROW_GAP = re.compile(r"\S {3,}\S")
+# One row of a section's printed contents page: an optional number, the
+# title, dot leaders, and the page it points at. Leaders run in ASCII dots or
+# ellipsis characters; the page is missing when it wrapped to its own line.
+_TOC_ENTRY = re.compile(r"^(?:(\d+(?:\.\d+)*\.?)\s+)?(\S.*?)\s*[.…]{3,}[\s.…]*(\d{1,3})?$")
+# Inside a contents run, a row whose leaders were lost: "3.15 TITLE 58".
+_TOC_NO_LEADER = re.compile(r"^(\d+(?:\.\d+)*\.?)\s+(\S.*?)\s+(\d{1,3})$")
+_TOC_HEAD = re.compile(r"^(\d+(?:\.\d+)*\.?)\s+(\S.*)$")
+# A Word sub-bullet: a literal "o" and its padding, one level under a bullet.
+_SUB_BULLET = re.compile(r"^o\s{2,}(\S.*)$")
+# Where a wrapped para may take a lowercase line even though the line above
+# stopped short of the column limit: its sentence plainly had not ended.
+_OPEN_SENTENCE = re.compile(r"[A-Za-z,(]$")
+# ...but never a lettered item, which starts lowercase and is a new line: "a)", "(ii)".
+_LETTERED = re.compile(r"^\(?[a-z]{1,4}[).]\s")
+
+
+def is_contents_page(lines: list[str], chrome: list[int]) -> bool:
+    """Whether a page carries a printed contents list: a numbered leadered row,
+    or two leadered rows that end in a page number. Checklists use dot leaders
+    too ("PBE ........ DON", pdf 1164), but are never numbered and end in a
+    word, not a page. A one-entry list (pdf 173) is still numbered."""
+    skip = set(chrome)
+    rows = 0
+    for i, raw in enumerate(lines):
+        if i in skip or not (m := _TOC_ENTRY.match(raw.strip())):
+            continue
+        if m.group(1):
+            return True
+        if m.group(3):
+            rows += 1
+            if rows >= 2:
+                return True
+    return False
+
+
+def _toc_level(number: str | None) -> int:
+    return number.rstrip(".").count(".") + 1 if number else 1
 
 
 def _numbered(stripped: str) -> tuple[str, int] | None:
@@ -103,7 +140,9 @@ class _Parser:
     still fed a single page: any state crossing a page boundary is carried by
     the CALLER, through `start_in_table` / `table_indent`."""
 
-    def __init__(self, full: int, in_table: bool, table_indent: int | None) -> None:
+    def __init__(
+        self, full: int, in_table: bool, table_indent: int | None, contents: bool = False
+    ) -> None:
         self.full = full
         self.out: list[Block] = []
         self.open_indent: list[int | None] = []  # parallel to out; None once closed
@@ -113,6 +152,15 @@ class _Parser:
         # The table's left edge: the lowest row indent so far.
         self.table_indent = table_indent if in_table else None
         self.pending_note = False  # the last block is a bare "Note:" awaiting its body
+        # A contents page starts inside a contents run, so a wrapped entry
+        # at the very top of the page is still read as one.
+        self.contents = contents
+        self.in_toc = contents
+        # A numbered contents row still waiting for its leaders and page on
+        # the next line; (raw line, block index) so it can be undone if the
+        # run ends first and it was a real heading after all.
+        self.toc_head: tuple[str, int] | None = None
+        self.bullet_level = 0  # level of the last glyph bullet, for "o" sub-bullets
 
     def close_table(self) -> None:
         table = self.table
@@ -131,6 +179,66 @@ class _Parser:
         self.out.append(Block(kind=kind, level=level, text=text))
         self.open_indent.append(indent)
 
+    def add_toc(self, number: str | None, title: str, page: str | None) -> None:
+        self.out.append(
+            Block(
+                kind="toc",
+                level=_toc_level(number),
+                text=" ".join(title.split()),
+                number=number.rstrip(".") if number else None,
+                page=int(page) if page else None,
+            )
+        )
+        self.open_indent.append(None)
+
+    def feed_toc(self, stripped: str) -> bool:
+        """Take `stripped` as part of a contents run, or end the run. Pure
+        routing: True when the line was consumed."""
+        entry = _TOC_ENTRY.match(stripped)
+        if entry:
+            number, title, page = entry.groups()
+            head, self.toc_head = self.toc_head, None
+            if head and number is None:
+                # The second half of a wrapped entry: its leaders and page.
+                last = self.out[head[1]]
+                last.text = f"{last.text} {' '.join(title.split())}"
+                last.page = int(page) if page else None
+            else:
+                self.add_toc(number, title, page)
+            self.in_toc = True
+            return True
+        if not self.in_toc:
+            return False
+        last = self.out[-1] if self.out and self.out[-1].kind == "toc" else None
+        if last and last.page is None and stripped.isdigit() and len(stripped) <= 3:
+            last.page = int(stripped)  # the page number wrapped to its own line
+            self.toc_head = None
+            return True
+        if not_leadered := _TOC_NO_LEADER.match(stripped):
+            self.toc_head = None
+            self.add_toc(*not_leadered.groups())
+            return True
+        if head := _TOC_HEAD.match(stripped):
+            self.toc_head = None
+            self.add_toc(head.group(1), head.group(2), None)
+            self.toc_head = (stripped, len(self.out) - 1)
+            return True
+        self.end_toc()
+        return False
+
+    def end_toc(self) -> None:
+        """Close a contents run. A numbered line that never got its leaders
+        was not a contents row but a heading or step on a mixed page: put it
+        back as the block it would have been."""
+        self.in_toc = False
+        if self.toc_head:
+            stripped, i = self.toc_head
+            self.toc_head = None
+            numbered = _numbered(stripped)
+            kind, level = numbered or ("para", 0)
+            self.out[i] = Block(kind=kind, level=level, text=stripped)
+            self.open_indent[i] = None
+
     def feed(self, raw: str) -> None:
         out = self.out
         stripped = raw.strip()
@@ -143,6 +251,10 @@ class _Parser:
             return
 
         awaiting_body, self.pending_note = self.pending_note, False
+
+        if self.contents and not self.in_table and self.feed_toc(stripped):
+            self.prev_len = 0
+            return
 
         if _TABLE_CAP.match(stripped):
             self.close_table()
@@ -209,9 +321,11 @@ class _Parser:
 
         # A bare "Note:" takes this line as its body -- unless the line is a
         # list item or another note, which the label introduces instead.
+        sub = _SUB_BULLET.match(stripped)
         if (
             awaiting_body
             and stripped[0] not in BULLET_GLYPHS
+            and not sub
             and not numbered
             and not _NOTE.match(stripped)
         ):
@@ -220,7 +334,15 @@ class _Parser:
             return
 
         if stripped[0] in BULLET_GLYPHS:
-            self.add("bullet", stripped[1:].strip(), indent, max(0, indent // 5 - 1))
+            self.bullet_level = max(0, indent // 5 - 1)
+            self.add("bullet", stripped[1:].strip(), indent, self.bullet_level)
+            self.prev_len = len(raw.rstrip())
+            return
+
+        if sub:
+            # The marker is a letter, so it is dropped like a glyph and the
+            # renderer draws the sub-bullet's own marker.
+            self.add("bullet", sub.group(1).strip(), indent, self.bullet_level + 1)
             self.prev_len = len(raw.rstrip())
             return
 
@@ -236,10 +358,23 @@ class _Parser:
             self.prev_len = len(raw.rstrip())
             return
 
-        if out and self.open_indent[-1] is not None and self.prev_len >= self.full:
+        if out and self.open_indent[-1] is not None:
             prev_ind = self.open_indent[-1]
-            if out[-1].kind in ("bullet", "step", "para", "note") and indent >= prev_ind:
-                out[-1].text = f"{out[-1].text} {stripped}".strip()
+            prev = out[-1]
+            wrapped = self.prev_len >= self.full or (
+                # A para that stopped mid-sentence ("... (crew to point at")
+                # continues on a lowercase line, whatever its length.
+                prev.kind == "para"
+                and self.prev_len > 0
+                and stripped[0].islower()
+                and not _LETTERED.match(stripped)
+                and _OPEN_SENTENCE.search(prev.text) is not None
+            )
+            if wrapped and prev.kind in ("bullet", "step", "para", "note") and indent >= prev_ind:
+                # A word hyphenated across the break ("take-" / "off") is
+                # rejoined whole, not as "take- off".
+                glue = "" if prev.text[-2:-1].isalpha() and prev.text.endswith("-") else " "
+                prev.text = f"{prev.text}{glue}{stripped}".strip()
                 self.prev_len = len(raw.rstrip())
                 return
 
@@ -259,11 +394,15 @@ def _run(
 ) -> _Parser:
     skip = set(chrome)
     parser = _Parser(
-        wrap_width(lines, chrome) if full is None else full, start_in_table, table_indent
+        wrap_width(lines, chrome) if full is None else full,
+        start_in_table,
+        table_indent,
+        is_contents_page(lines, chrome),
     )
     for i, raw in enumerate(lines):
         if i not in skip:
             parser.feed(raw)
+    parser.end_toc()
     return parser
 
 

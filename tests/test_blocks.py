@@ -370,10 +370,12 @@ def test_a_carried_table_edge_decides_whether_a_gapless_line_is_a_row():
 def test_the_wrap_width_can_be_supplied_by_the_caller():
     """A citation parses a slice of a page; it must rejoin wrapped lines using the
     page's width, not a width recomputed from the few lines it was handed."""
-    lines = ["Cabin crew shall check the", "door before arming."]
+    # The second line opens with a capital, so only the width can join it --
+    # a lowercase one would join as an unfinished sentence at any width.
+    lines = ["Cabin crew shall check the", "L1 door before arming."]
     joined = parse_blocks(lines, [], full=10)
     unjoined = parse_blocks(lines, [], full=200)
-    assert [b.text for b in joined] == ["Cabin crew shall check the door before arming."]
+    assert [b.text for b in joined] == ["Cabin crew shall check the L1 door before arming."]
     assert len(unjoined) == 2
 
 
@@ -428,3 +430,125 @@ def test_a_carried_table_closed_before_any_row_leaves_no_empty_table():
 def test_a_page_opening_with_a_gapped_heading_does_not_open_with_a_row():
     assert not opens_with_a_row(["", "2.         EXTERIOR DESCRIPTION"], [])
     assert not opens_with_a_row(["Table 4.4F"], [])
+
+
+# --- The printed contents pages -------------------------------------------------
+# Most sections open with their own contents list, set with dot leaders. Read as
+# prose it rendered as runs of dots that wrapped on a phone; it is a list of
+# entries, each pointing at a page of the section.
+
+
+def test_a_contents_row_is_an_entry_with_its_number_title_and_page():
+    lines = [
+        "TABLE OF CONTENTS",
+        "",
+        "1.        GENERAL ........................................................5",
+        "",
+        "1.1       RAPID/EXPLOSIVE DECOMPRESSION .................................7",
+    ]
+    blocks = parse_blocks(lines, [])
+    toc = [b for b in blocks if b.kind == "toc"]
+    assert [(b.number, b.text, b.page, b.level) for b in toc] == [
+        ("1", "GENERAL", 5, 1),
+        ("1.1", "RAPID/EXPLOSIVE DECOMPRESSION", 7, 2),
+    ]
+
+
+def test_a_wrapped_contents_entry_is_one_entry():
+    """pdf 32: the title wraps and only its second line carries the leaders; the
+    page can also fall to a line of its own."""
+    lines = [
+        "3.14 SECTION 8 SERIES O PART II (PASSENGER BRIEFING) ................ 57",
+        "",
+        "3.16 SECTION 8 SERIES O PART II (SEAT/BERTH/SEATBELT/SAFETY",
+        "     HARNESS) ............................................................ 58",
+        "",
+        "3.17 SECTION 8 SERIES O PART II (LIFE RAFT AND SURVIVAL EQUIPMENT)",
+        "      59",
+    ]
+    toc = [b for b in parse_blocks(lines, []) if b.kind == "toc"]
+    assert [(b.number, b.page) for b in toc] == [("3.14", 57), ("3.16", 58), ("3.17", 59)]
+    assert toc[1].text == "SECTION 8 SERIES O PART II (SEAT/BERTH/SEATBELT/SAFETY HARNESS)"
+
+
+def test_a_heading_after_a_contents_list_stays_a_heading():
+    """A numbered line with no leaders is only a contents row if the run goes on;
+    on a mixed page it is the section's real first heading."""
+    lines = [
+        "1.        GENERAL ........................................................5",
+        "2.        CREW RESPONSIBILITIES ..........................................7",
+        "",
+        "1.        GENERAL",
+        "Smoke is the result of combustion, and a byproduct of burning materials.",
+    ]
+    blocks = parse_blocks(lines, [])
+    assert [b.kind for b in blocks] == ["toc", "toc", "heading", "para"]
+
+
+def test_checklist_leaders_are_not_a_contents_list():
+    """pdf 1164: an emergency checklist sets challenge and response with dot
+    leaders too, but is never numbered and ends in a word, not a page."""
+    lines = [
+        "BASIC FIRE FIGHTING PROCEDURE..........................APPLY",
+        "PBE.................................................DON",
+    ]
+    assert all(b.kind != "toc" for b in parse_blocks(lines, []))
+
+
+@needs_index
+def test_no_section_contents_page_still_shows_its_dot_leaders():
+    corpus = Corpus("data")
+    for pdf_page in (31, 32, 557, 569, 655, 1114):
+        page = corpus.page(pdf_page)
+        for block in parse_blocks(page.lines, page.chrome):
+            assert "....." not in block.text, (pdf_page, block.text)
+
+
+@needs_index
+def test_real_checklists_keep_their_leaders():
+    corpus = Corpus("data")
+    for pdf_page in (1164, 1165, 1166):
+        page = corpus.page(pdf_page)
+        assert all(b.kind != "toc" for b in parse_blocks(page.lines, page.chrome))
+
+
+# --- Lists and wrapped text -----------------------------------------------------
+
+
+def test_a_word_o_sub_bullet_nests_under_its_bullet():
+    """pdf 305: Word's "o" sub-bullets survive as a literal letter. They were
+    paras, or glued onto the bullet above when it ran to the column limit."""
+    lines = [
+        f"{BULLET}    The limitation on number of Infants that may travel is subject to the",
+        "         o    Availability of oxygen masks in an aircraft",
+        "         o    Availability of sufficient life vests for Infants.",
+    ]
+    blocks = parse_blocks(lines, [], full=40)
+    assert [(b.kind, b.level, b.text) for b in blocks] == [
+        ("bullet", 0, "The limitation on number of Infants that may travel is subject to the"),
+        ("bullet", 1, "Availability of oxygen masks in an aircraft"),
+        ("bullet", 1, "Availability of sufficient life vests for Infants."),
+    ]
+
+
+def test_a_word_hyphenated_across_a_line_is_rejoined_whole():
+    lines = ["Infants are secured in the parent's lap for taxi, take-", "off, and landing."]
+    assert parse_blocks(lines, [], full=10)[0].text == (
+        "Infants are secured in the parent's lap for taxi, take-off, and landing."
+    )
+
+
+def test_an_unfinished_sentence_takes_its_lowercase_continuation():
+    """pdf 397: a short line that stops mid-sentence still wraps onto the next."""
+    lines = [
+        "Hawa ke dabaav mein kami hone par oxygen mask oopar bane panel (crew to point at",
+        "the oxygen mask panel). se neeche aa jaayenge.",
+    ]
+    blocks = parse_blocks(lines, [], full=200)
+    assert len(blocks) == 1
+    assert "(crew to point at the oxygen mask panel)" in blocks[0].text
+
+
+def test_a_lettered_item_is_not_a_continuation():
+    lines = ["The crew shall check the following", "a) the door is armed"]
+    assert len(parse_blocks(lines, [], full=200)) == 2

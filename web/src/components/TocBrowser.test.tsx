@@ -127,7 +127,7 @@ describe("TocBrowser", () => {
     await act(async () => {});
 
     const text = () => JSON.stringify(renderer!.toJSON());
-    expect(text()).toContain("1. GENERAL · continued");
+    expect(text()).toContain("1 General · continued");
     expect(text()).toContain("p2 body");
 
     const [general] = renderer!.root.findAllByProps({ className: "m-h-toggle" });
@@ -142,5 +142,42 @@ describe("TocBrowser", () => {
     const sections = renderer!.root.findAllByType("section");
     expect(sections).toHaveLength(3);
     expect(sections.map((s) => Boolean(s.props.hidden))).toEqual([false, true, false]);
+  });
+
+  it("jumps to the page a contents entry names, reopening a collapsed heading that hides it", async () => {
+    fetchToc.mockResolvedValue([NODE]);
+    fetchSection.mockResolvedValue([
+      {
+        ...page(1, 3),
+        blocks: [
+          { kind: "toc", level: 1, depth: 0, text: "CREW", number: "2", page: 3 },
+          { kind: "heading", level: 1, depth: 0, text: "1. GENERAL" },
+          { kind: "para", level: 0, depth: 1, text: "p1 body" },
+        ],
+      },
+      { ...page(2, 3), continues: ["1. GENERAL"], blocks: [{ kind: "para", level: 0, depth: 1, text: "p2" }] },
+      { ...page(3, 3), continues: ["1. GENERAL"], blocks: [{ kind: "para", level: 0, depth: 1, text: "p3" }] },
+    ]);
+    const scrolled: string[] = [];
+    vi.stubGlobal("document", {
+      getElementById: (id: string) => ({ scrollIntoView: () => scrolled.push(id) }),
+    });
+    vi.stubGlobal("window", { ...globalThis.window, matchMedia: () => ({ matches: true }) });
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(<TocBrowser />);
+    });
+    await act(async () => {});
+    await act(async () => renderer!.root.findByProps({ className: "toc-open" }).props.onClick());
+    await act(async () => {});
+    // Collapse "1. GENERAL": pages 2 and 3 are hidden under it.
+    await act(async () => renderer!.root.findByProps({ className: "m-h-toggle" }).props.onClick());
+    expect(JSON.stringify(renderer!.toJSON())).not.toContain("p3");
+
+    await act(async () => renderer!.root.findByProps({ className: "m-toc-row" }).props.onClick());
+    expect(scrolled).toEqual(["manual-page-592"]); // page 3 of the section
+    expect(JSON.stringify(renderer!.toJSON())).toContain("p3");
+    vi.unstubAllGlobals();
   });
 });
