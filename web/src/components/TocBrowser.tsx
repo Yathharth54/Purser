@@ -74,7 +74,13 @@ function hiddenBlocks(
  * can be collapsed -- including across page breaks (see `hiddenBlocks`). A
  * page whose every block is collapsed away hides its page marker too.
  */
-export function TocBrowser() {
+interface Props {
+  /** A section to open, asked for from elsewhere (the home shortcuts). */
+  openSection?: string | null;
+  onSectionOpened?: () => void;
+}
+
+export function TocBrowser({ openSection = null, onSectionOpened }: Props = {}) {
   const [nodes, setNodes] = useState<TocNode[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [openNode, setOpenNode] = useState<TocNode | null>(null);
@@ -89,6 +95,14 @@ export function TocBrowser() {
       .then(setNodes)
       .catch((err: unknown) => setLoadError(err instanceof Error ? err.message : String(err)));
   }, []);
+
+  // Open a requested section once the contents list has arrived.
+  useEffect(() => {
+    if (!openSection || nodes.length === 0) return;
+    const node = nodes.find((n) => n.section === openSection);
+    if (node) setOpenNode(node);
+    onSectionOpened?.();
+  }, [openSection, nodes, onSectionOpened]);
 
   useEffect(() => {
     if (!openNode?.section) return;

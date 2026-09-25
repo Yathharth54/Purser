@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException
-from sqlmodel import select
+from fastapi import APIRouter, HTTPException, Response
+from sqlmodel import delete, select
 from sse_starlette.sse import EventSourceResponse
 
 from purser_api.citations import resolve_all
@@ -42,6 +42,23 @@ def get_thread(thread_id: str) -> list[ThreadMessage]:
             )
             for m in rows
         ]
+
+
+@router.delete("/threads/{thread_id}", status_code=204)
+def delete_thread(thread_id: str) -> Response:
+    """Forget a chat for good, with its messages.
+
+    Messages are deleted explicitly, not left to ON DELETE CASCADE, for the
+    same reason as `prune_threads`: SQLite databases made before the cascade
+    existed don't have it.
+    """
+    with session() as s:
+        if s.get(Thread, thread_id) is None:
+            raise HTTPException(status_code=404, detail="no such thread")
+        s.exec(delete(Message).where(Message.thread_id == thread_id))
+        s.exec(delete(Thread).where(Thread.id == thread_id))
+        s.commit()
+    return Response(status_code=204)
 
 
 def _load_history(thread_id: str) -> list[Message]:

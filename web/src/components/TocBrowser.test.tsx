@@ -180,4 +180,18 @@ describe("TocBrowser", () => {
     expect(JSON.stringify(renderer!.toJSON())).toContain("p3");
     vi.unstubAllGlobals();
   });
+
+  it("opens a section asked for from elsewhere, once the contents list is in", async () => {
+    fetchToc.mockResolvedValue([NODE]);
+    fetchSection.mockResolvedValue([page(1, 1)]);
+    const opened = vi.fn();
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(<TocBrowser openSection="4.4" onSectionOpened={opened} />);
+    });
+    await act(async () => {});
+    expect(fetchSection).toHaveBeenCalledWith("4.4");
+    expect(opened).toHaveBeenCalled();
+    expect(JSON.stringify(renderer!.toJSON())).toContain("Page 1 body text");
+  });
 });

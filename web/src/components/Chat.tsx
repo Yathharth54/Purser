@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { fetchThread, streamChat } from "../api/client";
-import type { Citation, ThreadMessage, ToolEvent } from "../api/types";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { fetchThread, fetchThreads, streamChat } from "../api/client";
+import type { Citation, ThreadMessage, ThreadSummary, ToolEvent } from "../api/types";
 import { ChatHistory } from "./ChatHistory";
 import { CitationChip } from "./CitationChip";
 import { AnswerMarkdown } from "../lib/answerMarkdown";
@@ -27,11 +27,56 @@ interface Props {
    *  the thread -- Chat owns what switching or starting a chat means. */
   chatsOpen: boolean;
   onCloseChats: () => void;
+  /** Open a section of the manual in the Manual tab (the home shortcuts). */
+  onOpenSection: (section: string) => void;
 }
 
-// Per the approved mockup's empty state (four chips, this exact wording and
-// order) -- not the plan's earlier three-chip sketch.
-const STARTERS = ["Ditching drill", "Slide raft detach", "Infant restraint", "Smoke in the cabin"];
+// Home shortcuts: the emergency chapters, straight into the manual.
+const SECTIONS: { section: string; label: string; icon: ReactNode }[] = [
+  {
+    section: "4.4",
+    label: "Evacuations",
+    icon: (
+      <>
+        <path d="M13 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5" />
+        <path d="M4 12h10" />
+        <path d="m10 8 4 4-4 4" />
+      </>
+    ),
+  },
+  {
+    section: "4.2",
+    label: "Smoke / fumes",
+    icon: <path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18Z" />,
+  },
+  {
+    section: "4.3",
+    label: "Decompression",
+    icon: (
+      <>
+        <path d="M12 3v5" />
+        <path d="M7 12c0-2.2 2.2-4 5-4s5 1.8 5 4v2a5 5 0 0 1-10 0z" />
+        <path d="M9 21h6" />
+      </>
+    ),
+  },
+  {
+    section: "4.1",
+    label: "Fire fighting",
+    icon: <path d="M12 3c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8Z" />,
+  },
+];
+
+/** "10:04" today, "Yest." yesterday, "22 Sep" before that. */
+function recentWhen(iso: string): string {
+  const d = new Date(iso);
+  const days = Math.round(
+    (new Date().setHours(0, 0, 0, 0) - new Date(iso).setHours(0, 0, 0, 0)) / 86_400_000,
+  );
+  if (days <= 0) return formatClock(d);
+  if (days === 1) return "Yest.";
+  return d.toLocaleDateString([], { day: "numeric", month: "short" });
+}
 
 // The chat she is in survives a refresh: its id is kept on the device and
 // reopened on load. Storage can be unavailable (private mode) -- then a
@@ -120,7 +165,7 @@ function friendlyError(detail: string): string {
   return `Couldn't answer: ${detail}`;
 }
 
-export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
+export function Chat({ onOpenCitation, chatsOpen, onCloseChats, onOpenSection }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -129,10 +174,54 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
   const [restoring, setRestoring] = useState(() => storedThread() !== null);
   const threadId = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const questionRef = useRef<HTMLElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // What the next render should do with the scroll position: "question" puts
+  // the question she just asked at the top and leaves it there while the
+  // answer streams in below; "end" shows the end of a chat she reopened.
+  // Anything else -- every streamed word -- leaves her scroll where it is.
+  const scrollIntent = useRef<"question" | "end" | null>(null);
+  const pinned = useRef(false);
+  // Her last few chats, for the home view. Fetched whenever home shows.
+  const [recent, setRecent] = useState<ThreadSummary[]>([]);
+  const home = turns.length === 0;
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    if (!home || restoring) return;
+    let cancelled = false;
+    void fetchThreads()
+      .then((t) => !cancelled && setRecent(t.slice(0, 3)))
+      .catch(() => !cancelled && setRecent([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [home, restoring]);
+
+  useEffect(() => {
+    const box = scrollRef.current;
+    const spacer = spacerRef.current;
+    if (!box || !spacer) return;
+    const intent = scrollIntent.current;
+    scrollIntent.current = null;
+    if (intent === "end") {
+      pinned.current = false;
+      spacer.style.height = "0px";
+      box.scrollTo({ top: box.scrollHeight });
+      return;
+    }
+    const q = questionRef.current;
+    if (!pinned.current || !q) return;
+    // Room below the question for it to reach the top even while the answer
+    // is still short; it shrinks to nothing as the answer grows.
+    const boxTop = box.getBoundingClientRect().top;
+    const qTop = q.getBoundingClientRect().top - boxTop + box.scrollTop;
+    const below = box.scrollHeight - spacer.offsetHeight - qTop;
+    spacer.style.height = `${Math.max(0, box.clientHeight - below)}px`;
+    if (intent === "question") {
+      const reduce = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      box.scrollTo({ top: Math.max(0, qTop - 12), behavior: reduce ? "auto" : "smooth" });
+    }
   }, [turns]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -144,6 +233,7 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
       const messages = await fetchThread(id);
       threadId.current = id;
       storeThread(id);
+      scrollIntent.current = "end";
       setTurns(messages.map(toTurn));
     } catch (err) {
       // Forget it only if the server says it's gone (pruned: the last 100 are
@@ -160,8 +250,19 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
     if (busy) return;
     threadId.current = null;
     storeThread(null);
+    scrollIntent.current = "end";
     setTurns([]);
     onCloseChats();
+  }
+
+  // A chat deleted from the panel: if it is the one on screen, clear it
+  // without closing the panel she is still working in.
+  function chatDeleted(id: string) {
+    if (threadId.current !== id) return;
+    threadId.current = null;
+    storeThread(null);
+    scrollIntent.current = "end";
+    setTurns([]);
   }
 
   useEffect(() => {
@@ -176,6 +277,8 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
 
     setInput("");
     setBusy(true);
+    scrollIntent.current = "question";
+    pinned.current = true;
     setTurns((t) => [
       ...t,
       {
@@ -224,6 +327,38 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
     setBusy(false);
   }
 
+  const lastQuestion = turns.map((t) => t.role).lastIndexOf("user");
+
+  // One question box: in the middle of the home view, then at the foot of
+  // the conversation once one has begun.
+  function composer(className: string) {
+    return (
+      <form
+        className={className}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void send(input);
+        }}
+      >
+        <input
+          id="purser-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask about a procedure"
+          aria-label="Ask about a procedure"
+          disabled={busy || restoring}
+          autoComplete="off"
+          enterKeyHint="send"
+        />
+        <button type="submit" className="send" disabled={busy || !input.trim()} aria-label="Send">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <path d="M12 4 L12 20 M12 4 L6 10 M12 4 L18 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </form>
+    );
+  }
+
   return (
     <div className="chat">
       <ChatHistory
@@ -232,36 +367,55 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
         busy={busy}
         onSelect={(id) => void openThread(id)}
         onNew={newChat}
+        onDeleted={chatDeleted}
         onClose={onCloseChats}
       />
 
       <div className="turns" ref={scrollRef}>
-        {turns.length === 0 && (
-          <div className="empty">
-            <h2 className="empty-head">Ask about a procedure</h2>
-            <p className="empty-sub">
-              Search the Safety and Emergency Procedures Manual, cited to the page.
-            </p>
-            <div className="starters">
-              {STARTERS.map((s) => (
+        {home && (
+          <div className="home">
+            <img className="home-mark" src="/icons/icon-180.png" alt="" width={52} height={52} />
+            <h2 className="home-head">What do you need?</h2>
+            <p className="home-sub">Answered from the manual, cited to the page.</p>
+            {composer("composer composer-home")}
+            <div className="home-sections" aria-label="Open the manual at">
+              {SECTIONS.map((s) => (
                 <button
-                  key={s}
+                  key={s.section}
                   type="button"
-                  className="starter"
-                  onClick={() => void send(s)}
-                  disabled={restoring}
+                  className="home-section"
+                  onClick={() => onOpenSection(s.section)}
+                  aria-label={`${s.label}, section ${s.section}`}
                 >
-                  {s}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {s.icon}
+                  </svg>
+                  {s.label}
                 </button>
               ))}
             </div>
+            {recent.length > 0 && (
+              <section className="home-recent" aria-label="Recent chats">
+                <h3 className="home-label">Recent</h3>
+                <ul>
+                  {recent.map((t) => (
+                    <li key={t.id}>
+                      <button type="button" className="home-recent-row" onClick={() => void openThread(t.id)} disabled={restoring}>
+                        <span className="home-recent-title">{t.title || "Untitled chat"}</span>
+                        <span className="home-recent-when">{recentWhen(t.updated_at)}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
         )}
 
         {turns.map((turn, i) => {
           if (turn.role === "user") {
             return (
-              <article key={i} className="me">
+              <article key={i} className="me" ref={i === lastQuestion ? questionRef : undefined}>
                 {turn.body}
               </article>
             );
@@ -311,30 +465,10 @@ export function Chat({ onOpenCitation, chatsOpen, onCloseChats }: Props) {
             </article>
           );
         })}
+        <div ref={spacerRef} className="turns-spacer" aria-hidden="true" />
       </div>
 
-      <form
-        className="composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send(input);
-        }}
-      >
-        <input
-          id="purser-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about a procedure"
-          disabled={busy || restoring}
-          autoComplete="off"
-          enterKeyHint="send"
-        />
-        <button type="submit" className="send" disabled={busy || !input.trim()} aria-label="Send">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-            <path d="M12 4 L12 20 M12 4 L6 10 M12 4 L18 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </form>
+      {!home && composer("composer")}
     </div>
   );
 }

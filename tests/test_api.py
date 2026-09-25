@@ -573,3 +573,33 @@ def test_a_renderer_error_is_503_not_500(client, monkeypatch):
 
     monkeypatch.setattr(manual_mod, "render_page", _raise)
     assert client.get("/api/page/600/image").status_code == 503
+
+
+def test_deleting_a_chat_removes_it_and_its_messages(client):
+    from sqlmodel import select
+
+    from purser_api.db import Message, Thread, session
+
+    with session() as s:
+        keep, gone = Thread(title="keep"), Thread(title="gone")
+        s.add_all([keep, gone])
+        s.commit()
+        s.add_all(
+            [
+                Message(thread_id=gone.id, role="user", body="brace?"),
+                Message(thread_id=keep.id, role="user", body="slide?"),
+            ]
+        )
+        s.commit()
+        keep_id, gone_id = keep.id, gone.id
+
+    assert client.delete(f"/api/threads/{gone_id}").status_code == 204
+    assert [t["id"] for t in client.get("/api/threads").json()] == [keep_id]
+    assert client.get(f"/api/threads/{gone_id}").status_code == 404
+    with session() as s:
+        left = s.exec(select(Message.thread_id)).all()
+    assert left == [keep_id]
+
+
+def test_deleting_an_unknown_chat_404s(client):
+    assert client.delete("/api/threads/does-not-exist").status_code == 404

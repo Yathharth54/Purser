@@ -433,6 +433,89 @@ main {
   color: var(--text);
 }
 
+/* A chat and its delete button, side by side. */
+.chats-item {
+  display: flex;
+  align-items: flex-start;
+}
+
+.chats-item .chats-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.chats-del {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--dim);
+  opacity: 0.75;
+}
+
+.chats-del:hover,
+.chats-del:focus-visible {
+  opacity: 1;
+  color: var(--warning);
+}
+
+.chats-del:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chats-del:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+/* The row turned into "Delete this chat?" until she answers. */
+.chats-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 12px;
+  background: var(--sunken);
+  box-shadow: var(--inset);
+}
+
+.chats-confirm-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.chats-confirm-no,
+.chats-confirm-yes {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.chats-confirm-no {
+  color: var(--dim);
+}
+
+.chats-confirm-yes {
+  color: var(--warning);
+  background: var(--raised);
+  box-shadow: var(--s1), var(--hi);
+}
+
+.chats-confirm-no:focus-visible,
+.chats-confirm-yes:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .chats-row:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 0;
@@ -506,44 +589,158 @@ main {
   gap: 7px;
 }
 
-/* ---------- Empty state ---------- */
-
-.empty {
-  padding-top: 12px;
+/* Room under the newest question so it can sit at the top while its answer
+   is still short (Chat sets the height; it is 0 otherwise). */
+.turns-spacer {
+  flex: none;
+  height: 0;
 }
 
-.empty-head {
+/* ---------- Home: the Ask screen before a chat begins ----------
+   Question first: the question box sits in the middle, with the emergency
+   chapters and her last few chats under it. Once she asks, it is the
+   ordinary conversation, and the box moves to the foot. */
+
+.home {
+  display: flex;
+  flex-direction: column;
+  padding: 40px 4px 0;
+}
+
+.home-mark {
+  align-self: center;
+  display: block;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  box-shadow: var(--s2);
+}
+
+.home-head {
+  margin: 18px 0 6px;
+  text-align: center;
   font-family: var(--ff-display);
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 6px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.05;
   color: var(--text);
 }
 
-.empty-sub {
-  margin: 0;
+.home-sub {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: 13.5px;
   color: var(--dim);
-  font-size: 14px;
-  line-height: 1.6;
-  max-width: 42ch;
 }
 
-.starters {
+/* The composer, drawn as the page's one big field. */
+.composer.composer-home {
+  gap: 8px;
+  min-height: 58px;
+  padding: 0 6px 0 18px;
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  background: var(--raised);
+  box-shadow: var(--s2), var(--hi);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.composer.composer-home:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.composer.composer-home input {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  outline: none;
+}
+
+.composer.composer-home .send {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+}
+
+.home-sections {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
 }
 
-.starter {
-  min-height: 44px;
-  padding: 10px 16px;
-  font-size: 13.5px;
+.home-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-size: 13px;
   color: var(--text);
-  background: var(--raised);
-  border-radius: 14px;
-  box-shadow: var(--s2), var(--hi);
+}
+
+.home-section svg {
+  color: var(--accent);
+}
+
+.home-section:focus-visible,
+.home-recent-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.home-recent {
+  margin-top: 28px;
+}
+
+.home-label {
+  margin: 0 0 4px;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.home-recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-recent-row {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: 46px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--rule);
   text-align: left;
+  color: var(--text);
+}
+
+.home-recent-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.home-recent-when {
+  flex: none;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--dim);
 }
 
 /* ---------- Her bubble ---------- */
@@ -797,68 +994,194 @@ main {
 }
 
 /* ---------- Passcode screen ----------
-   The only thing shown before the passcode is accepted (see PasscodeGate).
-   Centred in the thumb-reachable middle of a phone, on the app's own paper. */
+   The only thing shown before the passcode is accepted (see PasscodeGate),
+   set as the cover of the manual: a double gold rule inset from the edge,
+   the title in the running head, the mark, and one field in thumb reach.
+   Built on the theme tokens, so it is ivory by day and navy in the cabin. */
 
-.gate {
-  width: min(100% - 32px, 360px);
-  margin: 12vh auto 0;
+.gate-page {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 58px) 40px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  background: var(--bg);
+}
+
+.gate-page::before,
+.gate-page::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid var(--accent);
+}
+
+.gate-page::before {
+  inset: calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  border-radius: 18px;
+  opacity: 0.35;
+}
+
+.gate-page::after {
+  inset: calc(env(safe-area-inset-top, 0px) + 19px) 19px calc(env(safe-area-inset-bottom, 0px) + 19px);
+  border-radius: 14px;
+  opacity: 0.15;
+}
+
+.gate-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.gate-kicker {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.gate-rule {
+  width: 1px;
+  height: 46px;
+  margin: 18px 0;
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+.gate-mark {
+  display: block;
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  box-shadow: var(--s2);
 }
 
 .gate-title {
-  margin: 0;
+  margin: 22px 0 0;
   font-family: var(--ff-display);
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 52px;
+  font-weight: 600;
+  line-height: 0.95;
   color: var(--text);
 }
 
-.gate-note {
-  margin: 0 0 4px;
-  font-size: 13.5px;
-  line-height: 1.5;
+.gate-sub {
+  margin: 10px 0 0;
+  font-family: var(--ff-display);
+  font-size: 19px;
+  font-style: italic;
   color: var(--dim);
 }
 
-.gate-input {
-  font: inherit;
-  font-size: 16px; /* >= 16px stops iOS Safari zooming into the field */
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--rule);
-  background: var(--raised);
-  color: var(--text);
-  box-shadow: var(--inset);
+.gate {
+  width: min(100%, 320px);
+  margin-top: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.gate-input:focus-visible {
+.gate-label {
+  text-align: center;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.gate-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 54px;
+  padding: 0 5px 0 18px;
+  border-radius: 27px;
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  box-shadow: var(--s1), var(--hi);
+}
+
+.gate-field:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.gate-error {
-  margin: 0;
-  font-size: 13px;
-  color: var(--warning);
+.gate-field-wrong {
+  border-color: var(--warning);
 }
 
+.gate-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: none;
+  background: none;
+  font-size: 16px; /* >= 16px stops iOS Safari zooming into the field */
+  color: var(--text);
+  outline: none;
+}
+
+.gate-input::placeholder {
+  color: var(--dim);
+}
+
+/* The one primary action here, so the one gold surface. */
 .gate-go {
-  font: inherit;
-  font-weight: 700;
-  padding: 12px 14px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--gold);
-  color: #1b1405;
-  cursor: pointer;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #e9d2a4, var(--gold));
+  color: #241a07;
+  box-shadow: 0 6px 16px -6px rgba(220, 192, 140, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .gate-go:disabled {
   opacity: 0.55;
   cursor: default;
+}
+
+.gate-go:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.gate-note,
+.gate-error {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.gate-note {
+  color: var(--dim);
+}
+
+.gate-error {
+  color: var(--warning);
+}
+
+.gate-foot {
+  margin: auto 0 0;
+  padding-top: 32px;
+  text-align: center;
+  font-family: var(--ff-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  opacity: 0.8;
 }
 
 /* ---------- Manual blocks: the formatted manual document ----------

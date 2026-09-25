@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
-const { fetchThreads } = vi.hoisted(() => ({ fetchThreads: vi.fn() }));
-vi.mock("../api/client", () => ({ fetchThreads }));
+const { fetchThreads, deleteThread } = vi.hoisted(() => ({ fetchThreads: vi.fn(), deleteThread: vi.fn() }));
+vi.mock("../api/client", () => ({ fetchThreads, deleteThread }));
 const { ChatHistory } = await import("./ChatHistory");
 
 const keys: Record<string, (e: { key: string }) => void> = {};
@@ -36,6 +36,7 @@ async function render(props: Props = {}): Promise<ReactTestRenderer> {
         busy={false}
         onSelect={() => {}}
         onNew={() => {}}
+        onDeleted={() => {}}
         onClose={() => {}}
         {...props}
       />,
@@ -48,12 +49,15 @@ async function render(props: Props = {}): Promise<ReactTestRenderer> {
 const text = (r: ReactTestRenderer) => JSON.stringify(r.toJSON());
 const rows = (r: ReactTestRenderer) =>
   r.root.findAll((n) => n.type === "button" && String(n.props.className).startsWith("chats-row"));
+const del = (r: ReactTestRenderer, title: string) =>
+  r.root.findByProps({ "aria-label": `Delete “${title}”` });
 const labels = (r: ReactTestRenderer) =>
   r.root.findAll((n) => n.props.className === "chats-group-label").map((n) => n.props.children);
 
 describe("ChatHistory", () => {
   beforeEach(() => {
     fetchThreads.mockReset().mockResolvedValue(THREADS);
+    deleteThread.mockReset().mockResolvedValue(undefined);
     vi.stubGlobal("window", {
       ...globalThis.window,
       addEventListener: (t: string, f: (e: { key: string }) => void) => (keys[t] = f),
@@ -107,7 +111,7 @@ describe("ChatHistory", () => {
     await act(async () => r.root.findByProps({ className: "chats-new" }).props.onClick());
     expect(onNew).toHaveBeenCalled();
     await act(async () => r.update(
-      <ChatHistory open currentId="a" busy onSelect={() => {}} onNew={onNew} onClose={() => {}} />,
+      <ChatHistory open currentId="a" busy onSelect={() => {}} onNew={onNew} onDeleted={() => {}} onClose={() => {}} />,
     ));
     expect(r.root.findByProps({ className: "chats-new" }).props.disabled).toBe(true);
     expect(rows(r).every((b) => b.props.disabled)).toBe(true);
@@ -126,7 +130,7 @@ describe("ChatHistory", () => {
     expect(fetchThreads).not.toHaveBeenCalled();
     expect(r.root.findAllByProps({ className: "chats-backdrop" })).toHaveLength(0);
     await act(async () => r.update(
-      <ChatHistory open currentId="a" busy={false} onSelect={() => {}} onNew={() => {}} onClose={() => {}} />,
+      <ChatHistory open currentId="a" busy={false} onSelect={() => {}} onNew={() => {}} onDeleted={() => {}} onClose={() => {}} />,
     ));
     expect(fetchThreads).toHaveBeenCalledTimes(1);
   });
@@ -134,5 +138,39 @@ describe("ChatHistory", () => {
   it("says so when there are no chats yet", async () => {
     fetchThreads.mockResolvedValue([]);
     expect(text(await render())).toContain("No chats yet");
+  });
+
+  it("deletes a chat only once she confirms, and tells Chat which one", async () => {
+    const onDeleted = vi.fn();
+    const r = await render({ onDeleted });
+    await act(async () => del(r, "Oxygen masks dropped").props.onClick());
+    expect(text(r)).toContain("Delete this chat?");
+    expect(deleteThread).not.toHaveBeenCalled();
+    await act(async () => r.root.findByProps({ className: "chats-confirm-no" }).props.onClick());
+    expect(text(r)).not.toContain("Delete this chat?");
+    expect(rows(r)).toHaveLength(5);
+
+    await act(async () => del(r, "Oxygen masks dropped").props.onClick());
+    await act(async () => r.root.findByProps({ className: "chats-confirm-yes" }).props.onClick());
+    expect(deleteThread).toHaveBeenCalledWith("b");
+    expect(onDeleted).toHaveBeenCalledWith("b");
+    expect(rows(r)).toHaveLength(4);
+    expect(text(r)).not.toContain("Oxygen masks dropped");
+  });
+
+  it("puts a chat back if the server refuses to delete it", async () => {
+    deleteThread.mockRejectedValue(new Error("Couldn't delete this chat (500)"));
+    const onDeleted = vi.fn();
+    const r = await render({ onDeleted });
+    await act(async () => del(r, "Brace position").props.onClick());
+    await act(async () => r.root.findByProps({ className: "chats-confirm-yes" }).props.onClick());
+    expect(rows(r)).toHaveLength(5);
+    expect(text(r)).toContain("Couldn't delete this chat (500)");
+    expect(onDeleted).not.toHaveBeenCalled();
+  });
+
+  it("won't delete while an answer is still coming in", async () => {
+    const r = await render({ busy: true });
+    expect(del(r, "Brace position").props.disabled).toBe(true);
   });
 });

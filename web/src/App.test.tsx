@@ -4,9 +4,15 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 const { fetchSession } = vi.hoisted(() => ({ fetchSession: vi.fn() }));
 vi.mock("./api/client", () => ({ fetchSession, login: vi.fn(), LOCKED_EVENT: "purser:locked" }));
 vi.mock("./components/Chat", () => ({
-  Chat: ({ chatsOpen }: { chatsOpen: boolean }) => <p>{chatsOpen ? "CHAT+PANEL" : "CHAT"}</p>,
+  Chat: ({ chatsOpen, onOpenSection }: { chatsOpen: boolean; onOpenSection: (s: string) => void }) => (
+    <p className="chat-mock" onClick={() => onOpenSection("4.4")}>
+      {chatsOpen ? "CHAT+PANEL" : "CHAT"}
+    </p>
+  ),
 }));
-vi.mock("./components/TocBrowser", () => ({ TocBrowser: () => <p>TOC</p> }));
+vi.mock("./components/TocBrowser", () => ({
+  TocBrowser: ({ openSection }: { openSection: string | null }) => <p>{`TOC:${openSection ?? "none"}`}</p>,
+}));
 vi.mock("./components/PageDrawer", () => ({ PageDrawer: () => null }));
 const listeners: Record<string, () => void> = {};
 vi.stubGlobal("window", {
@@ -81,5 +87,20 @@ describe("App passcode gate", () => {
     fetchSession.mockResolvedValue({ authenticated: false, required: true });
     const r = await render();
     expect(r.root.findAllByProps({ "aria-label": "Your chats" })).toHaveLength(0);
+  });
+
+  it("opens a manual section asked for from the home screen", async () => {
+    fetchSession.mockResolvedValue({ authenticated: true, required: true });
+    const r = await render();
+    await act(async () => r.root.findByProps({ className: "chat-mock" }).props.onClick());
+    expect(r.root.findByProps({ id: "tab-manual" }).props["aria-selected"]).toBe(true);
+    expect(JSON.stringify(r.toJSON())).toContain("TOC:4.4");
+  });
+
+  it("shows the passcode screen as a cover, with no app header above it", async () => {
+    fetchSession.mockResolvedValue({ authenticated: false, required: true });
+    const r = await render();
+    expect(r.root.findAllByProps({ className: "app-head" })).toHaveLength(0);
+    expect(JSON.stringify(r.toJSON())).toContain("Safety and Emergency Procedures Manual");
   });
 });
