@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { streamChat } from "../api/client";
-import type { Citation, ToolEvent } from "../api/types";
+import { fetchThread, streamChat } from "../api/client";
+import type { Citation, ThreadMessage, ToolEvent } from "../api/types";
+import { ChatHistory } from "./ChatHistory";
 import { CitationChip } from "./CitationChip";
 import { AnswerMarkdown } from "../lib/answerMarkdown";
 
@@ -27,6 +28,40 @@ interface Props {
 // Per the approved mockup's empty state (four chips, this exact wording and
 // order) -- not the plan's earlier three-chip sketch.
 const STARTERS = ["Ditching drill", "Slide raft detach", "Infant restraint", "Smoke in the cabin"];
+
+// The chat she is in survives a refresh: its id is kept on the device and
+// reopened on load. Storage can be unavailable (private mode) -- then a
+// refresh simply starts a fresh chat, as before.
+const THREAD_KEY = "purser-thread";
+
+function storedThread(): string | null {
+  try {
+    return localStorage.getItem(THREAD_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeThread(id: string | null): void {
+  try {
+    if (id) localStorage.setItem(THREAD_KEY, id);
+    else localStorage.removeItem(THREAD_KEY);
+  } catch {
+    // Ignore -- only affects reopening after a refresh.
+  }
+}
+
+function toTurn(m: ThreadMessage): Turn {
+  return {
+    role: m.role === "user" ? "user" : "assistant",
+    body: m.body,
+    citations: m.citations,
+    settled: true,
+    toolStatus: null,
+    errorText: null,
+    time: formatClock(new Date(m.created_at)),
+  };
+}
 
 function formatClock(date: Date): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -85,6 +120,7 @@ export function Chat({ onOpenCitation }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const threadId = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -94,6 +130,34 @@ export function Chat({ onOpenCitation }: Props) {
   }, [turns]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  async function openThread(id: string) {
+    try {
+      const messages = await fetchThread(id);
+      threadId.current = id;
+      storeThread(id);
+      setTurns(messages.map(toTurn));
+    } catch {
+      // Pruned (the server keeps the last 100) or otherwise gone: start fresh.
+      if (threadId.current === id) threadId.current = null;
+      storeThread(null);
+    }
+    setShowHistory(false);
+  }
+
+  function newChat() {
+    if (busy) return;
+    threadId.current = null;
+    storeThread(null);
+    setTurns([]);
+    setShowHistory(false);
+  }
+
+  useEffect(() => {
+    const id = storedThread();
+    if (id) void openThread(id);
+    // Runs once on mount: reopen the chat she was in before a refresh.
+  }, []);
 
   async function send(message: string) {
     const trimmed = message.trim();
@@ -135,6 +199,7 @@ export function Chat({ onOpenCitation }: Props) {
       {
         onThread: (id) => {
           threadId.current = id;
+          storeThread(id);
         },
         onTool: (event) => patchLast((t) => ({ ...t, toolStatus: describeTool(event) })),
         onDelta: (text) => patchLast((t) => ({ ...t, body: t.body + text, toolStatus: null })),
@@ -150,7 +215,25 @@ export function Chat({ onOpenCitation }: Props) {
 
   return (
     <div className="chat">
-      <div className="turns" ref={scrollRef}>
+      <div className="chat-bar">
+        <button type="button" className="bar-btn" onClick={() => setShowHistory((v) => !v)}>
+          Chats
+        </button>
+        <span className="head-spacer" aria-hidden="true" />
+        <button type="button" className="bar-btn new" onClick={newChat} disabled={busy}>
+          New
+        </button>
+      </div>
+
+      {showHistory && (
+        <ChatHistory
+          currentId={threadId.current}
+          onSelect={(id) => void openThread(id)}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      <div className="turns" ref={scrollRef} hidden={showHistory}>
         {turns.length === 0 && (
           <div className="empty">
             <h2 className="empty-head">Ask about a procedure</h2>

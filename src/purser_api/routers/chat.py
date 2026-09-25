@@ -34,7 +34,15 @@ def get_thread(thread_id: str) -> list[ThreadMessage]:
         rows = s.exec(
             select(Message).where(Message.thread_id == thread_id).order_by(Message.created_at)
         ).all()
-        return [ThreadMessage(role=m.role, body=m.body, citations=m.citations_json) for m in rows]
+        return [
+            ThreadMessage(
+                role=m.role,
+                body=m.body,
+                citations=m.citations_json,
+                created_at=m.created_at.isoformat(),
+            )
+            for m in rows
+        ]
 
 
 def _load_history(thread_id: str) -> list[Message]:

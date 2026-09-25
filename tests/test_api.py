@@ -538,3 +538,18 @@ def test_starting_a_new_chat_keeps_only_the_most_recent_chats(client, monkeypatc
         client.post("/api/chat", json={"message": q})
     titles = [t["title"] for t in client.get("/api/threads").json()]
     assert titles == ["third", "second"]
+
+
+def test_a_reopened_chat_carries_when_each_message_was_sent(client, monkeypatch):
+    import purser_api.routers.chat as chat_mod
+    from purser_agent.schemas import Answer
+
+    answer = Answer(body="", refs=[], not_in_manual=True)
+    monkeypatch.setattr(chat_mod, "get_agent", lambda: _FakeAgent(answer))
+    monkeypatch.setattr(chat_mod, "get_deps", lambda: object())
+    client.post("/api/chat", json={"message": "brace position"})
+    [thread] = client.get("/api/threads").json()
+    messages = client.get(f"/api/threads/{thread['id']}").json()
+    assert [m["role"] for m in messages] == ["user", "assistant"]
+    # ISO 8601 with an offset, so the phone can show it in local time
+    assert all(m["created_at"].endswith("+00:00") for m in messages)
