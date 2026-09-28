@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pytest
 
-FORBIDDEN = {"fastapi", "pydantic_ai", "openai", "httpx", "requests", "sqlmodel", "starlette"}
+FORBIDDEN = {
+    "fastapi", "pydantic_ai", "openai", "httpx", "requests", "sqlmodel", "starlette", "mcp",
+}
 CORE = Path(__file__).resolve().parents[1] / "src" / "purser_core"
 PATHS = sorted(CORE.rglob("*.py"))
 assert PATHS, "boundary test found no core modules"

@@ -16,5 +16,11 @@ load_dotenv(override=False)
 # .env also carries production settings. Tests must never write to the live
 # Neon database or be locked out by the app passcode, so drop them here:
 # chats go to a throwaway SQLite file and auth is off unless a test opts in.
-for _var in ("DATABASE_URL", "DATABASE_URL_UNPOOLED", "PGHOST", "PURSER_PASSCODE"):
+for _var in (
+    "DATABASE_URL",
+    "DATABASE_URL_UNPOOLED",
+    "PGHOST",
+    "PURSER_PASSCODE",
+    "PURSER_MCP_TOKEN",
+):
     os.environ.pop(_var, None)

@@ -1840,6 +1840,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "fastembed" },
+    { name = "mcp" },
     { name = "numpy" },
     { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
@@ -1868,6 +1869,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "fastembed", specifier = ">=0.4" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28" },
+    { name = "mcp", specifier = ">=2.2,<3" },
     { name = "numpy", specifier = ">=2.1" },
     { name = "pillow", specifier = ">=11.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },

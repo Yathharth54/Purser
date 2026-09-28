@@ -7,9 +7,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Route
 
 from purser_api import auth
 from purser_api.routers import chat, manual
+from purser_mcp.http import McpEndpoint
 
 # `src/purser_api/main.py` -> parent (purser_api) -> parent (src) -> parent (repo root).
 # `Path("web/dist")` would instead resolve against the process's CWD, so the
@@ -48,6 +50,12 @@ app.middleware("http")(auth.gate)
 app.include_router(auth.router)
 app.include_router(manual.router)
 app.include_router(chat.router)
+
+# MCP for Claude Code/Desktop (see purser_mcp.http). A Route, not a mount: a
+# mount answers POST /mcp with a 307, and it must come before the "/" static
+# mount, which would otherwise swallow it. Outside /api, so the passcode gate
+# does not apply -- it has its own bearer token.
+app.router.routes.append(Route("/mcp", McpEndpoint()))
 
 if _DIST.is_dir():
     app.mount("/", StaticFiles(directory=_DIST, html=True), name="web")
