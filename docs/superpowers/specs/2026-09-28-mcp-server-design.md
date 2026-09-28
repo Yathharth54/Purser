@@ -54,6 +54,8 @@ Claude Code ──HTTP + Bearer──▶ /mcp  (same Vercel function as the PWA 
   surfaces explain the tools the same way.
 - The five raw tools are marked `readOnlyHint`. Pydantic return types give structured
   output automatically.
+- An unknown section or an out-of-range page returns a tool error that points to `toc`,
+  not an empty list.
 - `ask` is the only tool that spends the LLM key. An agent failure comes back as a tool
   error, not a 500.
 - Server `instructions`: quote the manual's lines verbatim and cite them by their
@@ -71,6 +73,8 @@ Claude Code ──HTTP + Bearer──▶ /mcp  (same Vercel function as the PWA 
     by default.
   - Set, with a header other than `Authorization: Bearer <token>`: 401, compared with
     `hmac.compare_digest`.
+- POST only: any other method returns 405. In stateless mode a `GET` opens a stream
+  that never closes, which on Vercel would keep a function running for 300 s.
 - Rejection happens before the SDK is imported or any work is done.
 - DNS-rebinding protection is turned off (`TransportSecuritySettings(enable_dns_rebinding_protection=False)`).
   The SDK's default for `host=127.0.0.1` would reject the production Host header, and
@@ -88,8 +92,10 @@ sub-app's lifespan does not run under FastAPI. The wrapper therefore starts
 and waits for it to be ready before serving. It does not depend on whether Vercel runs
 ASGI lifespan.
 
-The `/mcp` mount is registered **before** the `/` StaticFiles mount, which would
-otherwise swallow it.
+`/mcp` is a Starlette `Route`, not a mount (a mount answers `POST /mcp` with a 307), and
+it is registered **before** the `/` StaticFiles mount, which would otherwise swallow it.
+The wrapper rebuilds the server when the event loop changes, because the session
+manager's task group belongs to the loop that started it.
 
 ## Testing
 
