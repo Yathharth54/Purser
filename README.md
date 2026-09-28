@@ -11,7 +11,8 @@
 
 <p align="center">
   <code>hybrid BM25 + dense retrieval</code> · <code>RRF fusion</code> · <code>tool-calling agent</code> ·
-  <code>citations by construction</code> · <code>FastAPI + SSE</code> · <code>React PWA</code>
+  <code>citations by construction</code> · <code>FastAPI + SSE</code> · <code>React PWA</code> ·
+  <code>MCP server</code>
 </p>
 
 ---
@@ -160,6 +161,7 @@ with an accent colour. Tokens live in `web/src/styles/tokens.css`.
 | L1–2 core | `purser_core` | BM25, dense search, RRF, block parser, reading order. **Imports nothing from the web stack** |
 | L3 agent | `purser_agent` | pydantic-ai, provider-agnostic, five tools, structured `Answer` |
 | L4 API | `purser_api` | FastAPI, SSE streaming, SQLModel (Postgres / SQLite), pypdfium2 page renders, passcode gate |
+| L4 MCP | `purser_mcp` | MCP Python SDK, stateless Streamable HTTP at `/mcp`, bearer token, loaded on first use |
 | L5 web | `web/` | React 18, Vite, TypeScript, PWA manifest and icons |
 
 ```
@@ -167,26 +169,41 @@ purser_ingest  ──writes──▶  data/          PDF → index, once per rev
 purser_core    ──reads───▶  data/          hybrid search + tree navigation
 purser_agent   ──uses────▶  purser_core    one agent, five tools
 purser_api     ──uses────▶  agent + core   streaming, sessions, citations
+purser_mcp     ──uses────▶  agent + core   the same tools, for Claude
 web            ──HTTP────▶  purser_api     React PWA
 ```
 
 `tests/test_boundaries.py` fails the build if `purser_core` ever imports FastAPI,
-pydantic-ai or an HTTP client. That boundary is what keeps a future MCP server a thin
-adapter.
+pydantic-ai, the MCP SDK or an HTTP client. That boundary is why the MCP server is a
+thin adapter: about two hundred lines over the same singletons the PWA uses, so the
+two can never disagree about the manual.
 
 ## Purser in Claude (MCP)
 
 The same five tools the agent uses, plus `ask` for Purser's own cited answer,
-served at `/mcp` for Claude Code and Claude Desktop. Set `PURSER_MCP_TOKEN`, then:
+served at `/mcp`. Set `PURSER_MCP_TOKEN`, then add it to Claude Code:
 
 ```sh
 claude mcp add --transport http purser https://<your-app>/mcp \
   --header "Authorization: Bearer $PURSER_MCP_TOKEN"
 ```
 
-Claude calls the tools on its own when a question needs the manual. Unlike the
-PWA, quoting verbatim is an instruction to the client model, not a guarantee;
-`ask` keeps the guarantee, because its citations are spliced from the index.
+Claude calls the tools on its own when a question needs the manual. Ask *"using
+purser, tell me all about the emergency exits and what happens if they are
+unoccupied"* and it searches, reads the exit and exit-seat sections in full, and
+answers with the manual's own lines and their `PART THREE §3.6 p.7` coordinates.
+
+- **Claude Desktop** can't send a custom header to a remote server, so bridge it
+  with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
+  `npx -y mcp-remote https://<your-app>/mcp --header "Authorization: Bearer <token>"`.
+- **claude.ai and the mobile app** need OAuth or a no-auth connector, so they
+  aren't supported yet.
+- **Citations work differently from the PWA.** With the reading tools, quoting
+  verbatim is an instruction to the client model, not a guarantee. `ask` keeps
+  the guarantee, because its citations are spliced from the index.
+- **Details:** `/mcp` returns 404 until the token is set, 401 without it, and
+  405 for anything but POST (a stateless GET would hold a function open). `ask`
+  gives up after 240 s, inside Vercel's 300 s limit.
 
 ## Quick start
 
