@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -42,7 +46,10 @@ def test_a_blank_token_counts_as_unset(monkeypatch):
         assert c.post("/mcp", json=LIST, headers=_auth("")).status_code == 404
 
 
-@pytest.mark.parametrize("headers", [H, _auth("wrong"), {**H, "Authorization": TOKEN}])
+@pytest.mark.parametrize(
+    "headers",
+    [H, _auth("wrong"), {**H, "Authorization": TOKEN}, {**H, "Authorization": f"Basic {TOKEN}"}],
+)
 def test_it_is_closed_without_the_right_token(token, headers):
     with _client() as c:
         r = c.post("/mcp", json=LIST, headers=headers)
@@ -89,3 +96,47 @@ def test_the_passcode_gate_does_not_apply_to_mcp(token, monkeypatch):
     monkeypatch.setenv("PURSER_PASSCODE", "tulip-42")
     with _client() as c:
         assert c.post("/mcp", json=LIST, headers=_auth()).status_code == 200
+
+
+def _endpoint():
+    from purser_api.main import app
+
+    return next(r for r in app.router.routes if getattr(r, "path", None) == "/mcp").endpoint
+
+
+def test_it_recovers_when_the_session_manager_dies(token):
+    endpoint = _endpoint()
+
+    async def kill() -> None:
+        endpoint._task.cancel()
+        await asyncio.wait({endpoint._task})
+
+    with _client() as c:
+        assert c.post("/mcp", json=LIST, headers=_auth()).status_code == 200
+        c.portal.call(kill)
+        assert c.post("/mcp", json=LIST, headers=_auth()).status_code == 200
+
+
+class _BrokenServer:
+    """A server whose session manager fails before it is ready."""
+
+    def streamable_http_app(self, **_):
+        return None
+
+    class session_manager:  # noqa: N801 -- stands in for the SDK's attribute
+        @staticmethod
+        @contextlib.asynccontextmanager
+        async def run():
+            raise RuntimeError("session manager failed to start")
+            yield
+
+
+@pytest.mark.asyncio
+async def test_a_startup_failure_fails_the_request_instead_of_hanging(token, monkeypatch):
+    from purser_api.main import app
+
+    monkeypatch.setattr("purser_mcp.server.build_server", _BrokenServer)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        r = await asyncio.wait_for(c.post("/mcp", json=LIST, headers=_auth()), timeout=5)
+    assert r.status_code == 500

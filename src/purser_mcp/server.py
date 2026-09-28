@@ -7,10 +7,13 @@ manual. Imported only on the first /mcp request -- see purser_mcp.http.
 
 from __future__ import annotations
 
+import asyncio
+from typing import Annotated
+
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from purser_agent import tooling
 from purser_api.citations import resolve_all
@@ -19,6 +22,9 @@ from purser_api.schemas import Citation
 from purser_core.models import GlossaryEntry, PageText, PartName, SectionHit, TocNode
 
 LAST_PAGE = 1226
+# Headroom under Vercel's 300 s function limit; with json_response the client sees nothing until
+# the run ends, so a run cut off by the platform would be a bare disconnect.
+ASK_TIMEOUT_S = 240
 
 INSTRUCTIONS = """Purser reads the Airbus A320/321 Safety and Emergency Procedures
 Manual. Every page is addressed as PART, section and page, e.g. PART FOUR §4.4 p.34.
@@ -48,7 +54,7 @@ def build_server() -> MCPServer:
     server = MCPServer("purser", instructions=INSTRUCTIONS)
 
     @server.tool(description=tooling.SEARCH, annotations=_READ_ONLY)
-    def search(query: str, k: int = 8) -> list[SectionHit]:
+    def search(query: str, k: Annotated[int, Field(ge=1, le=20)] = 8) -> list[SectionHit]:
         return get_tools().search(query, k=k)
 
     @server.tool(description=tooling.TOC, annotations=_READ_ONLY)
@@ -84,7 +90,13 @@ def build_server() -> MCPServer:
     @server.tool(description=tooling.ASK)
     async def ask(question: str) -> AskResult:
         try:
-            result = await get_agent().run(question, deps=get_deps())
+            async with asyncio.timeout(ASK_TIMEOUT_S):
+                result = await get_agent().run(question, deps=get_deps())
+        except TimeoutError as exc:
+            raise ToolError(
+                f"Purser took longer than {ASK_TIMEOUT_S} s to answer. "
+                "Use search and read_section instead."
+            ) from exc
         except Exception as exc:  # a missing key, a provider outage, a bad model reply
             raise ToolError(f"Purser could not answer: {exc}") from exc
         answer = result.output

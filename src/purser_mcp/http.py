@@ -60,20 +60,28 @@ class McpEndpoint:
 
     async def _ready(self) -> ASGIApp:
         loop = asyncio.get_running_loop()
-        if self._app is not None and self._loop is loop:
+        if self._app is not None and self._loop is loop and self._alive():
             return self._app
         if self._lock is None or self._loop is not loop:
             self._lock, self._loop, self._app = asyncio.Lock(), loop, None
         async with self._lock:
-            if self._app is None:
+            # A dead session manager answers every request with a 500: rebuild, as for a new loop.
+            if self._app is None or not self._alive():
                 self._app = await self._start()
         return self._app
+
+    def _alive(self) -> bool:
+        return self._task is not None and not self._task.done()
 
     async def _start(self) -> ASGIApp:
         from mcp.server.transport_security import TransportSecuritySettings
 
+        from purser_api.deps import get_tools
         from purser_mcp.server import build_server
 
+        # Sync tools run in worker threads and get_tools is an unlocked lru_cache: build it once
+        # here, off the loop, so two parallel first calls cannot each build PurserTools.
+        await asyncio.to_thread(get_tools)
         server = build_server()
         app = server.streamable_http_app(
             streamable_http_path="/mcp",
@@ -91,5 +99,11 @@ class McpEndpoint:
                 await asyncio.Event().wait()
 
         self._task = asyncio.create_task(hold())
-        await ready.wait()
+        # If hold() fails before it is ready, ready is never set: wait on the task as well.
+        waiter = asyncio.create_task(ready.wait())
+        await asyncio.wait({self._task, waiter}, return_when=asyncio.FIRST_COMPLETED)
+        if self._task.done():
+            waiter.cancel()
+            exc = None if self._task.cancelled() else self._task.exception()
+            raise exc or RuntimeError("MCP session manager stopped before it was ready")
         return app
