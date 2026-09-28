@@ -39,3 +39,18 @@ def test_the_session_check_does_not_connect_to_the_database(tmp_path, monkeypatc
         assert c.get("/api/session").status_code == 200
         assert db._engine is None
     db.reset_engine()
+
+
+def test_importing_the_app_does_not_load_the_mcp_sdk():
+    out = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; import purser_api.main; print('mcp.server' in sys.modules)",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={"PYTHONPATH": "src"},
+    )
+    assert out.stdout.strip() == "False"

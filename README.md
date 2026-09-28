@@ -174,6 +174,20 @@ web            ──HTTP────▶  purser_api     React PWA
 pydantic-ai or an HTTP client. That boundary is what keeps a future MCP server a thin
 adapter.
 
+## Purser in Claude (MCP)
+
+The same five tools the agent uses, plus `ask` for Purser's own cited answer,
+served at `/mcp` for Claude Code and Claude Desktop. Set `PURSER_MCP_TOKEN`, then:
+
+```sh
+claude mcp add --transport http purser https://<your-app>/mcp \
+  --header "Authorization: Bearer $PURSER_MCP_TOKEN"
+```
+
+Claude calls the tools on its own when a question needs the manual. Unlike the
+PWA, quoting verbatim is an instruction to the client model, not a guarantee;
+`ask` keeps the guarantee, because its citations are spliced from the index.
+
 ## Quick start
 
 ```sh
@@ -201,6 +215,7 @@ Everything is environment-driven. See [`.env.example`](.env.example).
 | `PURSER_MODEL` | `provider:model`, default `openai:gpt-4o`. See *Choosing a model* |
 | `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | the key for whichever provider `PURSER_MODEL` names |
 | `PURSER_PASSCODE` | turns on the passcode gate; empty means open (local dev) |
+| `PURSER_MCP_TOKEN` | turns on the MCP server at `/mcp`; clients send it as a bearer token |
 | `DATABASE_URL` | Postgres for chats (Neon on Vercel); unset means SQLite in `PURSER_VAR_DIR` |
 | `PURSER_MAX_THREADS` | chats kept before the least recently used are pruned (default 100) |
 | `PURSER_DATA_DIR` / `PURSER_VAR_DIR` | the committed index / runtime state |
