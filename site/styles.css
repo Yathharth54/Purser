@@ -60,10 +60,13 @@ a:hover { color: var(--gold); }
 .nav {
   position: sticky; top: 0; z-index: 5;
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center;
-  max-width: calc(var(--measure) + 2 * var(--gutter)); margin: 0 auto;
-  padding: calc(env(safe-area-inset-top, 0px) + 20px) var(--gutter) 20px;
-  background: linear-gradient(var(--navy) 60%, rgba(9, 15, 33, 0));
+  padding-block: calc(env(safe-area-inset-top, 0px) + 20px) 20px;
+  padding-inline: max(var(--gutter), calc((100% - var(--measure)) / 2));
+  background: var(--navy);
+  box-shadow: 0 1px 0 rgba(36, 48, 86, 0);
+  transition: box-shadow .4s var(--ease);
 }
+.nav.stuck { box-shadow: 0 1px 0 var(--line); }
 .wordmark {
   justify-self: center; text-decoration: none;
   font-family: var(--ff-display); font-weight: 600; font-size: 22px;
@@ -84,6 +87,13 @@ a:hover { color: var(--gold); }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; padding: 40px var(--gutter) 120px;
 }
+.hero-glow {
+  position: absolute; left: 50%; top: 50%; width: min(900px, 120vw); aspect-ratio: 1;
+  transform: translate(-50%, -58%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(120, 146, 205, .16), rgba(120, 146, 205, .05) 55%, transparent 72%);
+}
+.hero > :not(.hero-glow) { position: relative; }
+.hero .tape { position: absolute; }
 .hero-mark { width: clamp(120px, 14vw, 180px); height: auto; mix-blend-mode: lighten; }
 .hero-title {
   margin: 44px 0 0; font-family: var(--ff-display); font-weight: 400;
@@ -136,6 +146,12 @@ a:hover { color: var(--gold); }
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   background: var(--panel); border: 1px solid var(--line); border-radius: 22px; text-align: left;
 }
+.pass { overflow: hidden; }
+.pass::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(105deg, transparent 35%, rgba(246, 239, 227, .07) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
 .pass-half { display: flex; flex-direction: column; gap: 18px; padding: 44px 48px; }
 .pass-label { font-size: 14px; color: var(--dim); }
 .pass-big { font-family: var(--ff-display); font-size: clamp(40px, 4vw, 52px); line-height: 1; }
@@ -163,16 +179,20 @@ a:hover { color: var(--gold); }
 
 .flow { margin-top: 48px; width: 100%; display: flex; justify-content: center; }
 .flow svg { width: 100%; height: auto; }
-.flow .flow-wide { width: auto; max-width: 100%; height: min(980px, calc(100svh - 300px)); min-height: 560px; }
+.flow .flow-wide { width: auto; max-width: 100%; height: min(732px, calc(100svh - 340px)); min-height: 560px; }
+.flow-wide .node text { text-anchor: start; }
+#how { padding-block: 32px; }
 .flow .flow-narrow { display: none; max-width: 342px; }
 .wires path { stroke: var(--line-2); stroke-width: 1.5; }
 .node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
 .node-gold rect { stroke: var(--gold); stroke-width: 1.2; }
 .ico, .ico * { stroke: var(--soft); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
 .node-gold .ico, .node-gold .ico * { stroke: var(--gold); }
-.node .t { font-family: var(--ff-ui); font-weight: 700; font-size: 19px; fill: var(--ivory); text-anchor: middle; }
+.node .t { font-family: var(--ff-ui); font-weight: 700; font-size: 18px; fill: var(--ivory); text-anchor: middle; }
 .node .s { font-family: var(--ff-mono); font-size: 14px; fill: var(--dim); text-anchor: middle; }
 .node-gold .s { fill: var(--gold); }
+.pulse { fill: var(--ivory); opacity: 0; filter: drop-shadow(0 0 6px rgba(246, 239, 227, .9)); }
+.flow.pulsing .pulse { opacity: 1; transition: opacity .6s var(--ease); }
 .flow-narrow .node .t { font-size: 16px; }
 .flow-narrow .node .s { font-size: 12px; }
 
@@ -240,11 +260,15 @@ a:hover { color: var(--gold); }
 @media (prefers-reduced-motion: no-preference) {
 
   /* hero: one load sequence */
-  .js .hero > :not(.tape) { opacity: 0; transform: translateY(18px); animation: rise .9s var(--ease) forwards; }
+  .js .hero > :not(.tape):not(.hero-glow) { opacity: 0; transform: translateY(18px); animation: rise .9s var(--ease) forwards; }
   .js .hero-mark { transform: scale(.94); animation: arrive 1.2s var(--ease) forwards; }
   .js .hero-title { animation-delay: .25s; }
   .js .hero-lede { animation-delay: .4s; }
   .js .hero .btn { animation-delay: .55s; }
+  .js .hero-glow { opacity: 0; animation: fade 2s var(--ease) .2s forwards, breathe 9s ease-in-out 2.2s infinite; }
+  @keyframes breathe { 0%, 100% { transform: translate(-50%, -58%) scale(1); } 50% { transform: translate(-50%, -58%) scale(1.08); } }
+  .js .pass.in::after { animation: sheen 1.8s var(--ease) 1.2s 1 forwards; }
+  @keyframes sheen { to { transform: translateX(120%); } }
   .js .tape { opacity: 0; animation: fade 1s var(--ease) .8s forwards; }
   @keyframes fade { to { opacity: 1; } }
   @keyframes rise { to { opacity: 1; transform: none; } }

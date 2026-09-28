@@ -33,6 +33,7 @@
 
   tapes.forEach((el) => { el.innerHTML = tapeSvg(el.classList.contains("tape-bright")); });
 
+  const nav = document.querySelector(".nav");
   let ticking = false;
   function setHeading() {
     ticking = false;
@@ -42,6 +43,7 @@
     const centre = tapes[0] ? tapes[0].parentElement.clientWidth / 2 : 0;
     const x = centre - heading * PX_PER_DEG;
     tapes.forEach((el) => { el.style.transform = `translate3d(${x}px,0,0)`; });
+    if (nav) nav.classList.toggle("stuck", window.scrollY > 8);
   }
   function onScroll() {
     if (!ticking) { ticking = true; requestAnimationFrame(setHeading); }
@@ -76,6 +78,16 @@
     requestAnimationFrame(frame);
   }
 
+  // ---------- architecture: once drawn, a pulse keeps flowing through it ----------
+  // Two pulses leave the question together, take the two searches, meet at
+  // rank fusion and part again for the app and Claude.
+  function startPulses(flow) {
+    flow.classList.add("pulsing");
+    flow.querySelectorAll(".pulse animateMotion").forEach((m) => {
+      try { m.beginElement(); } catch (_) { /* SMIL unsupported: pulses stay hidden */ }
+    });
+  }
+
   // ---------- reveal on scroll ----------
   const targets = document.querySelectorAll("[data-reveal], [data-words], [data-flow], [data-gauges], .footer");
   if (reduce || !("IntersectionObserver" in window)) {
@@ -88,6 +100,7 @@
       const el = entry.target;
       el.classList.add("in");
       if (el.hasAttribute("data-gauges")) el.querySelectorAll("[data-count]").forEach(countUp);
+      if (el.hasAttribute("data-flow")) setTimeout(() => startPulses(el), 2200);
       io.unobserve(el);
     });
   }, { threshold: 0.25, rootMargin: "0px 0px -8% 0px" });
